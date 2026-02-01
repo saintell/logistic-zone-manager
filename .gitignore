@@ -8,8 +8,13 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+package-lock.json
+
+# Dependency directories
+node_modules
 dist
 dist-ssr
+dist-electron
 *.local
 
 # Editor directories and files
