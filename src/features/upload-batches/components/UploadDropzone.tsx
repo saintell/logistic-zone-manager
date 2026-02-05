@@ -8,6 +8,7 @@ interface FileWithPath extends File {
 }
 
 interface UploadDropzoneProps {
+    file?: File | null;
     onFilesSelected?: (files: FileWithPath[]) => void;
     onFileRemoved?: () => void;
     onReset?: () => void;
@@ -16,13 +17,21 @@ interface UploadDropzoneProps {
 }
 
 export function UploadDropzone({
+    file,
     onFilesSelected,
     onFileRemoved,
     onReset,
     isProcessing = false,
     isCompleted = false
 }: UploadDropzoneProps) {
-    const [selectedFile, setSelectedFile] = useState<FileWithPath | null>(null);
+    const [selectedFile, setSelectedFile] = useState<FileWithPath | null>((file as FileWithPath) || null);
+
+    useEffect(() => {
+        if (file !== undefined) {
+            setSelectedFile((file as FileWithPath) || null);
+        }
+    }, [file]);
+
     const [error, setError] = useState<string | null>(null);
     const dropzoneRef = useRef<HTMLDivElement>(null);
 
