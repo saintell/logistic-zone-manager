@@ -3,18 +3,11 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
-import dotenv from 'dotenv'
 import { configObject } from '../config/config'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 const isPackaged = app.isPackaged;
-
-// Load .env from appropriate location
-const envPath = isPackaged
-    ? path.join(process.resourcesPath, '.env')
-    : path.join(__dirname, '..', '.env');
-
-dotenv.config({ path: envPath });
 
 const pythonScriptsPath = isPackaged
     ? path.join(process.resourcesPath, 'python-scripts')
@@ -79,12 +72,16 @@ ipcMain.on('dinamic_method', (event, arg) => {
 
         let pythonProcess;
 
-        // Try to run executable first, then fallback to python script
-        if (fs.existsSync(exeFile)) {
+        // In development, prioritize python script (so changes are reflected immediately)
+        // In production (packaged), prioritize executable
+        const useExe = isPackaged && fs.existsSync(exeFile);
+        const usePy = !useExe && fs.existsSync(pyFile);
+
+        if (useExe) {
             pythonProcess = spawn(exeFile, [arg], {
                 env: { ...process.env }
             });
-        } else if (fs.existsSync(pyFile)) {
+        } else if (usePy) {
             pythonProcess = spawn('python', [pyFile, arg], {
                 env: { ...process.env }
             });

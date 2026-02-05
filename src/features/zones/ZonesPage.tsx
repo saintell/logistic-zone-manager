@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ZoneSelector, type Zone } from './components/ZoneSelector';
 import { AddZoneModal, type ZoneData } from './components/AddZoneModal';
+import { ConfirmationModal } from './components/ConfirmationModal';
 import './ZonesPage.css';
 
 // Color options for zones
@@ -22,8 +23,12 @@ export function ZonesPage() {
     const [editingZone, setEditingZone] = useState<ZoneData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Confirmation Modal State
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [zoneToDelete, setZoneToDelete] = useState<string | null>(null);
+
     // Track pending action to know which response we're waiting for
-    const pendingAction = useRef<'get_zones' | 'save_zone' | null>(null);
+    const pendingAction = useRef<'get_zones' | 'save_zone' | 'delete_zone' | null>(null);
 
     // Process zones data and update state
     const processZonesData = useCallback((zonesData: ZoneData[]) => {
@@ -60,6 +65,18 @@ export function ZonesPage() {
                         window.ipcRenderer.send('dinamic_method', payload);
                     } else {
                         console.error('Error saving zone:', response.error);
+                    }
+                } else if (pendingAction.current === 'delete_zone') {
+                    if (response.success) {
+                        // Reload zones after deleting
+                        pendingAction.current = 'get_zones';
+                        const payload = JSON.stringify({
+                            process: 'zones_manager',
+                            action: 'get_zones'
+                        });
+                        window.ipcRenderer.send('dinamic_method', payload);
+                    } else {
+                        console.error('Error deleting zone:', response.error);
                     }
                 }
             } catch (e) {
@@ -113,6 +130,23 @@ export function ZonesPage() {
         window.ipcRenderer.send('dinamic_method', payload);
     };
 
+    const handleDeleteClick = (zoneId: string) => {
+        setZoneToDelete(zoneId);
+        setIsConfirmOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (zoneToDelete) {
+            pendingAction.current = 'delete_zone';
+            const payload = JSON.stringify({
+                process: 'zones_manager',
+                action: 'delete_zone',
+                zoneId: zoneToDelete
+            });
+            window.ipcRenderer.send('dinamic_method', payload);
+        }
+    };
+
     return (
         <div className="zones-page">
             <header className="zones-header">
@@ -133,6 +167,7 @@ export function ZonesPage() {
                         showCoordinates={true}
                         onAddZone={handleOpenModal}
                         onZoneClick={handleZoneClick}
+                        onDeleteZone={handleDeleteClick}
                     />
                 )}
             </div>
@@ -143,6 +178,18 @@ export function ZonesPage() {
                 onClose={handleCloseModal}
                 onSave={handleSaveZone}
                 editingZone={editingZone}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={confirmDelete}
+                title="Eliminar Zona"
+                message="¿Estás seguro de que deseas eliminar esta zona? Esta acción no se puede deshacer."
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                isDestructive={true}
             />
         </div>
     );

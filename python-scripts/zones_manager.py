@@ -9,7 +9,6 @@ import os
 # Path to the zones data file (relative to the project root)
 ZONES_FILE = os.path.join(os.path.dirname(__file__), '..', 'config', 'zones.json')
 
-
 def load_zones():
     """Load zones from the JSON file."""
     try:

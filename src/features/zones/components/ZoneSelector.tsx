@@ -23,6 +23,7 @@ interface ZoneSelectorProps {
     onZoneSelect?: (zoneId: string) => void;
     onZoneDeselect?: (zoneId: string) => void;
     onZoneClick?: (zoneId: string) => void;
+    onDeleteZone?: (zoneId: string) => void;
     onAddZone?: () => void;
 }
 
@@ -36,6 +37,7 @@ export function ZoneSelector({
     showCoordinates = false,
     onZoneClick,
     onAddZone,
+    onDeleteZone,
 }: ZoneSelectorProps) {
     // Helper to check if a zone is selected
     const isSelected = (zoneId: string) => selectedZones.includes(zoneId);
@@ -144,6 +146,23 @@ export function ZoneSelector({
                                     )}
                                 </div>
                             </div>
+
+                            {/* Delete Button */}
+                            {onDeleteZone && (
+                                <button
+                                    className="zone-delete-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteZone(zone.id);
+                                    }}
+                                    title="Eliminar zona"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                        <polyline points="3 6 5 6 21 6" strokeLinecap="round" strokeLinejoin="round"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round"></path>
+                                    </svg>
+                                </button>
+                            )}
 
                             {/* Chevron icon */}
                             <svg className="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

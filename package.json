@@ -26,11 +26,19 @@
         "from": "python-scripts",
         "to": "python-scripts",
         "filter": [
+          "**/*.exe",
+          "requirements.txt",
+          "*.json"
+        ]
+      },
+      {
+        "from": "config",
+        "to": "config",
+        "filter": [
           "**/*"
         ]
       },
-      "public/icon.ico",
-      ".env"
+      "public/icon.ico"
     ],
     "win": {
       "target": [
