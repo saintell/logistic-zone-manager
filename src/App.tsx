@@ -1,5 +1,5 @@
 import './styles/globals.css';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { UploadBatchesPage } from './features/upload-batches/UploadBatchesPage';
 import { ZonesPage } from './features/zones/ZonesPage';
@@ -7,7 +7,7 @@ import { BatchProcessingProvider } from './features/upload-batches/context/Batch
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <BatchProcessingProvider>
         <Layout>
           <Routes>
@@ -16,7 +16,7 @@ function App() {
           </Routes>
         </Layout>
       </BatchProcessingProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

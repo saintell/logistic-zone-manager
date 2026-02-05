@@ -8,7 +8,43 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.logistic.zonemanager",
+    "productName": "Logistic Zone Manager",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "dist",
+      "dist-electron",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "python-scripts",
+        "to": "python-scripts",
+        "filter": [
+          "**/*"
+        ]
+      },
+      "public/icon.ico",
+      ".env"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Logistic Zone Manager"
+    }
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -23,6 +59,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "electron": "^40.1.0",
+    "electron-builder": "^26.7.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

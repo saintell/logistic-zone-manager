@@ -169,6 +169,11 @@ def cache_record(
     address_hash = get_address_hash(original_address)
     now = datetime.now().isoformat()
     
+    # Only cache if coordinates are present
+    if lat is None or lng is None or lat == '' or lng == '':
+        logger.info(f"Skipping cache for address: {original_address[:50]}... due to missing coordinates")
+        return cache if cache is not None else load_cache(cache_path)
+
     existing = cache.get("records", {}).get(address_hash)
     
     record = {

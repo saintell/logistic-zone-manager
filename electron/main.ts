@@ -2,13 +2,23 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs'
+import dotenv from 'dotenv'
 import { configObject } from '../config/config'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const developMode = true;
-const exe_test = false;
-let extension = exe_test ? ".exe" : ".py";
-let exePath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'python-scripts') + path.sep;
+const isPackaged = app.isPackaged;
+
+// Load .env from appropriate location
+const envPath = isPackaged
+    ? path.join(process.resourcesPath, '.env')
+    : path.join(__dirname, '..', '.env');
+
+dotenv.config({ path: envPath });
+
+const pythonScriptsPath = isPackaged
+    ? path.join(process.resourcesPath, 'python-scripts')
+    : path.join(__dirname, '..', 'python-scripts');
 
 process.env.APP_ROOT = path.join(__dirname, '..')
 
@@ -63,9 +73,24 @@ ipcMain.on('dinamic_method', (event, arg) => {
     let arg_parsed = JSON.parse(arg);
     const findObject = configObject.find(item => item.process_name === arg_parsed.process);
     if (findObject) {
-        let pythonProcess = developMode ? spawn('python', [exePath + findObject.fileName + extension, arg]) : spawn(exePath + findObject.fileName + '.exe', [arg]);
-        if (exe_test && developMode) {
-            pythonProcess = spawn(exePath + findObject.fileName + '.exe', [arg])
+        const scriptName = findObject.fileName;
+        const exeFile = path.join(pythonScriptsPath, scriptName + '.exe');
+        const pyFile = path.join(pythonScriptsPath, scriptName + '.py');
+
+        let pythonProcess;
+
+        // Try to run executable first, then fallback to python script
+        if (fs.existsSync(exeFile)) {
+            pythonProcess = spawn(exeFile, [arg], {
+                env: { ...process.env }
+            });
+        } else if (fs.existsSync(pyFile)) {
+            pythonProcess = spawn('python', [pyFile, arg], {
+                env: { ...process.env }
+            });
+        } else {
+            dialog.showErrorBox('Error', `No se pudo encontrar el script o ejecutable para: ${scriptName}\nBuscado en: ${pythonScriptsPath}`);
+            return;
         }
 
         pythonProcess.stdout.on('data', (data) => {

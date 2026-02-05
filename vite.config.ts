@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import path from 'node:path'
 import electron from 'vite-plugin-electron/simple'
 
 // https://vite.dev/config/

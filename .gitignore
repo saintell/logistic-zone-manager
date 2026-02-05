@@ -15,7 +15,9 @@ node_modules
 dist
 dist-ssr
 dist-electron
+dist_electron
 *.local
+*.exe
 address_cache.json
 
 # Editor directories and files

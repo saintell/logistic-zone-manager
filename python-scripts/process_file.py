@@ -54,7 +54,7 @@ def main():
             print(json.dumps({"status": "checking_cache", "count": len(original_addresses)}))
             
             # Check cache using ORIGINAL addresses (before normalization)
-            cached_results, uncached_indices = lookup_addresses_in_cache(original_addresses)
+            cached_results, initial_uncached_indices = lookup_addresses_in_cache(original_addresses)
             
             # Initialize result lists
             normalized_addresses = [''] * len(original_addresses)
@@ -62,72 +62,107 @@ def main():
             longitudes = [None] * len(original_addresses)
             zones = [''] * len(original_addresses)
             
-            # Fill in cached data
+            # Identify which indices need processing
+            indices_to_normalize = []
+            indices_to_geocode = []
             cache_hits = 0
+            
             for i, cached in enumerate(cached_results):
                 if cached is not None:
-                    normalized_addresses[i] = cached.get('normalized_address', original_addresses[i])
-                    latitudes[i] = cached.get('lat', '')
-                    longitudes[i] = cached.get('lng', '')
-                    zones[i] = cached.get('zone', '')
-                    cache_hits += 1
+                    # Always use cached normalized address if available
+                    norm_addr = cached.get('normalized_address')
+                    if norm_addr:
+                         normalized_addresses[i] = norm_addr
+
+                    lat = cached.get('lat')
+                    lng = cached.get('lng')
+                    
+                    # Check for valid coordinates
+                    if lat is not None and lng is not None and lat != '' and lng != '':
+                        # Full valid record found
+                        latitudes[i] = lat
+                        longitudes[i] = lng
+                        zones[i] = cached.get('zone', '')
+                        cache_hits += 1
+                    else:
+                        # Missing coordinates
+                        if norm_addr:
+                             # Has normalized address, just allow geocoding
+                             indices_to_geocode.append(i)
+                        else:
+                             # No normalized address either, full process needed
+                             indices_to_normalize.append(i)
+                else:
+                    # Not in cache at all
+                    indices_to_normalize.append(i)
             
-            print(json.dumps({"status": "cache_lookup_complete", "hits": cache_hits, "misses": len(uncached_indices)}))
+            print(json.dumps({"status": "cache_lookup_complete", 
+                              "hits": cache_hits, 
+                              "need_normalization": len(indices_to_normalize),
+                              "need_geocoding_only": len(indices_to_geocode)}))
             
         except ImportError as ie:
             print(json.dumps({"warning": f"Cache module not found: {ie}. Processing all addresses."}))
-            uncached_indices = list(range(len(original_addresses)))
+            indices_to_normalize = list(range(len(original_addresses)))
+            indices_to_geocode = []
             normalized_addresses = [''] * len(original_addresses)
             latitudes = [None] * len(original_addresses)
             longitudes = [None] * len(original_addresses)
             zones = [''] * len(original_addresses)
         except Exception as e:
             print(json.dumps({"warning": f"Cache lookup failed: {e}. Processing all addresses."}))
-            uncached_indices = list(range(len(original_addresses)))
+            indices_to_normalize = list(range(len(original_addresses)))
+            indices_to_geocode = []
             normalized_addresses = [''] * len(original_addresses)
             latitudes = [None] * len(original_addresses)
             longitudes = [None] * len(original_addresses)
             zones = [''] * len(original_addresses)
 
-        # Normalize ONLY uncached addresses
-        if uncached_indices:
+        # Normalize ONLY what needs normalization
+        if indices_to_normalize:
             try:
                 from address_normalizer import normalize_addresses as normalize_fn
                 
-                uncached_original = [original_addresses[i] for i in uncached_indices]
-                print(json.dumps({"status": "normalizing", "count": len(uncached_original)}))
+                to_normalize_original = [original_addresses[i] for i in indices_to_normalize]
+                print(json.dumps({"status": "normalizing", "count": len(to_normalize_original)}))
                 
-                normalized_result = normalize_fn(uncached_original)
+                normalized_result = normalize_fn(to_normalize_original)
                 
-                # Fill in normalized addresses for uncached records
-                for idx, norm_addr in zip(uncached_indices, normalized_result):
+                # Update normalized addresses and mark for geocoding
+                for idx, norm_addr in zip(indices_to_normalize, normalized_result):
                     normalized_addresses[idx] = norm_addr
+                    indices_to_geocode.append(idx)
                     
             except ImportError:
                 print(json.dumps({"warning": "Address normalizer module not found. Using original addresses."}))
-                for idx in uncached_indices:
+                for idx in indices_to_normalize:
                     normalized_addresses[idx] = original_addresses[idx]
+                    indices_to_geocode.append(idx)
             except Exception as e:
                 print(json.dumps({"warning": f"Address normalization failed: {e}. Using original addresses."}))
-                for idx in uncached_indices:
+                for idx in indices_to_normalize:
                     normalized_addresses[idx] = original_addresses[idx]
+                    indices_to_geocode.append(idx)
         
-        # Update DataFrame with normalized addresses
+        # Update DataFrame with normalized addresses (some from cache, some newly normalized)
         df_filtered['Dirección cliente'] = normalized_addresses
 
-        # Geocode ONLY uncached addresses
-        if uncached_indices:
+        # Sort indices to geocode to restore order (optional but good for consistency)
+        indices_to_geocode.sort()
+
+        # Geocode everything in indices_to_geocode (partials + newly normalized)
+        if indices_to_geocode:
             try:
                 from address_geocoder import geocode_addresses
                 
                 # Use normalized addresses for geocoding
-                uncached_normalized = [normalized_addresses[i] for i in uncached_indices]
-                print(json.dumps({"status": "geocoding", "count": len(uncached_normalized)}))
+                to_geocode_normalized = [normalized_addresses[i] for i in indices_to_geocode]
+                print(json.dumps({"status": "geocoding", "count": len(to_geocode_normalized)}))
                 
-                geocoded_coords = geocode_addresses(uncached_normalized)
+                geocoded_coords = geocode_addresses(to_geocode_normalized)
                 
                 # Fill in geocoded coordinates
-                for idx, coord in zip(uncached_indices, geocoded_coords):
+                for idx, coord in zip(indices_to_geocode, geocoded_coords):
                     latitudes[idx] = coord.get('lat', '')
                     longitudes[idx] = coord.get('lng', '')
                     
@@ -139,19 +174,20 @@ def main():
         df_filtered['Latitud'] = latitudes
         df_filtered['Longitud'] = longitudes
 
-        # Assign zones ONLY for uncached records
-        if uncached_indices:
+        # Assign zones & Cache - applied to all that were processed (geocoded)
+        indices_processed = indices_to_geocode 
+        if indices_processed:
             try:
                 from zone_assigner import assign_zones_to_records
                 
-                uncached_lats = [latitudes[i] for i in uncached_indices]
-                uncached_lngs = [longitudes[i] for i in uncached_indices]
-                print(json.dumps({"status": "assigning_zones", "count": len(uncached_indices)}))
+                proc_lats = [latitudes[i] for i in indices_processed]
+                proc_lngs = [longitudes[i] for i in indices_processed]
+                print(json.dumps({"status": "assigning_zones", "count": len(indices_processed)}))
                 
-                assigned_zones = assign_zones_to_records(uncached_lats, uncached_lngs)
+                assigned_zones = assign_zones_to_records(proc_lats, proc_lngs)
                 
                 # Fill in assigned zones
-                for idx, zone in zip(uncached_indices, assigned_zones):
+                for idx, zone in zip(indices_processed, assigned_zones):
                     zones[idx] = zone
                     
             except ImportError:
@@ -161,13 +197,13 @@ def main():
         
         df_filtered['Zona'] = zones
         
-        # Cache the newly processed records (using ORIGINAL address as key)
-        if uncached_indices:
+        # Cache the newly processed records
+        if indices_processed:
             try:
                 from address_cache import cache_multiple_records
                 
                 new_records = []
-                for idx in uncached_indices:
+                for idx in indices_processed:
                     lat_val = latitudes[idx]
                     lng_val = longitudes[idx]
                     
