@@ -118,7 +118,7 @@ export function ZonesPage() {
             <header className="zones-header">
                 <h1 className="zones-title">Gestión de Zonas</h1>
                 <p className="zones-description">
-                    Administra las zonas de entrega. Selecciona una zona para ver detalles o asignar direcciones.
+                    Administra las zonas de entrega. Selecciona una zona para ver detalles o puntos cardinales.
                 </p>
             </header>
 

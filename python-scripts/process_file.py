@@ -81,6 +81,24 @@ def main():
              df_filtered['Latitud'] = ''
              df_filtered['Longitud'] = ''
 
+        # Assign zones based on coordinates
+        try:
+            from zone_assigner import assign_zones_to_records
+            
+            latitudes = df_filtered['Latitud'].tolist()
+            longitudes = df_filtered['Longitud'].tolist()
+            print(json.dumps({"status": "assigning_zones", "count": len(latitudes)}))
+            
+            zones = assign_zones_to_records(latitudes, longitudes)
+            df_filtered['Zona'] = zones
+            
+        except ImportError:
+             print(json.dumps({"warning": "Zone assigner module not found. Skipping zone assignment."}))
+             df_filtered['Zona'] = ''
+        except Exception as e:
+             print(json.dumps({"warning": f"Zone assignment failed: {e}. Skipping zones."}))
+             df_filtered['Zona'] = ''
+
         # Generate output file path
         directory = os.path.dirname(file_path)
         filename = os.path.basename(file_path)
