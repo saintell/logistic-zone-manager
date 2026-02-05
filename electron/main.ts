@@ -24,7 +24,8 @@ let win: BrowserWindow | null
 function createWindow() {
     win = new BrowserWindow({
         webPreferences: {
-            preload: path.join(__dirname, 'preload.mjs'),
+            preload: path.join(__dirname, 'preload.cjs'),
+            sandbox: false,
         },
     })
 
@@ -103,3 +104,14 @@ ipcMain.on('dinamic_method', (event, arg) => {
     }
 
 })
+
+ipcMain.handle('select-directory', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory', 'promptToCreate']
+    });
+    if (canceled) {
+        return null;
+    } else {
+        return filePaths[0];
+    }
+});

@@ -5,9 +5,11 @@ interface BatchStatusProps {
     batch?: CurrentBatch | null;
     hasFile?: boolean;
     onStartProcessing?: () => void;
+    outputFolder?: string | null;
+    onSelectOutputFolder?: () => void;
 }
 
-export function BatchStatus({ batch, hasFile = false, onStartProcessing }: BatchStatusProps) {
+export function BatchStatus({ batch, hasFile = false, onStartProcessing, outputFolder, onSelectOutputFolder }: BatchStatusProps) {
     const getStepIcon = (status: string) => {
         switch (status) {
             case 'completed':
@@ -36,22 +38,60 @@ export function BatchStatus({ batch, hasFile = false, onStartProcessing }: Batch
                         </svg>
                     </div>
                     <h3 className="batch-status-ready-title">
-                        {hasFile ? 'Ready to Process' : 'Waiting for File'}
+                        {hasFile ? 'Listo para Procesar' : 'Esperando Archivo'}
                     </h3>
-                    <p className="batch-status-ready-description">
-                        {hasFile
-                            ? 'Click the button below to start processing the uploaded file'
-                            : 'Upload an Excel file to enable processing'
-                        }
-                    </p>
+
+                    <div className="output-folder-section" style={{ margin: '1.5rem 0 1rem', width: '100%', maxWidth: '400px', textAlign: 'left' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#4b5563', marginBottom: '0.5rem' }}>
+                            Carpeta de Destino:
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input
+                                type="text"
+                                readOnly
+                                value={outputFolder || 'Seleccionar carpeta...'}
+                                className="form-control"
+                                style={{
+                                    flex: 1,
+                                    padding: '0.5rem',
+                                    fontSize: '0.85rem',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '0.375rem',
+                                    backgroundColor: '#f3f4f6',
+                                    color: outputFolder ? '#111827' : '#9ca3af',
+                                    textOverflow: 'ellipsis'
+                                }}
+                            />
+                            <button
+                                className="btn btn-secondary"
+                                onClick={onSelectOutputFolder}
+                                type="button"
+                                style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                            >
+                                Seleccionar
+                            </button>
+                        </div>
+                        {!outputFolder && hasFile && (
+                            <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.5rem' }}>
+                                * Selecciona una carpeta de destino para continuar.
+                            </p>
+                        )}
+                    </div>
+
                     <button
                         type="button"
-                        className={`btn batch-status-start-btn ${hasFile ? 'btn-success' : 'btn-disabled'}`}
+                        className={`btn batch-status-start-btn ${hasFile && outputFolder ? 'btn-success' : 'btn-disabled'}`}
                         onClick={onStartProcessing}
-                        disabled={!hasFile}
+                        disabled={!hasFile || !outputFolder}
                     >
-                        Start Processing
+                        Iniciar Procesamiento
                     </button>
+
+                    {!hasFile && (
+                        <p className="batch-status-ready-description" style={{ marginTop: '1rem' }}>
+                            Carga un archivo Excel para comenzar.
+                        </p>
+                    )}
                 </div>
             </div>
         );
@@ -61,8 +101,8 @@ export function BatchStatus({ batch, hasFile = false, onStartProcessing }: Batch
         <div className="batch-status card">
             <div className="batch-status-header">
                 <div>
-                    <h3 className="batch-status-title">Current Batch Status</h3>
-                    <p className="batch-status-id">Batch ID: {batch.batchId}</p>
+                    <h3 className="batch-status-title">Estado del Lote Actual</h3>
+                    <p className="batch-status-id">ID del Lote: {batch.batchId}</p>
                 </div>
                 <span className={`badge badge-${batch.status}`}>
                     {batch.status.toUpperCase()}
@@ -79,7 +119,7 @@ export function BatchStatus({ batch, hasFile = false, onStartProcessing }: Batch
                         <div className="timeline-content">
                             <span className="timeline-step-name">{step.name}</span>
                             {step.status === 'completed' && step.completedAt && (
-                                <span className="timeline-step-detail">Completed at {step.completedAt}</span>
+                                <span className="timeline-step-detail">Completado a las {step.completedAt}</span>
                             )}
                             {step.status === 'in-progress' && (
                                 <div className="timeline-progress">
@@ -98,7 +138,7 @@ export function BatchStatus({ batch, hasFile = false, onStartProcessing }: Batch
                                 </div>
                             )}
                             {step.status === 'pending' && (
-                                <span className="timeline-step-detail text-muted">Pending</span>
+                                <span className="timeline-step-detail text-muted">Pendiente</span>
                             )}
                         </div>
                     </div>

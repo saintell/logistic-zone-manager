@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import './UploadDropzone.css';
 
@@ -12,42 +12,152 @@ interface UploadDropzoneProps {
     onFileRemoved?: () => void;
     onReset?: () => void;
     isProcessing?: boolean;
+    isCompleted?: boolean;
 }
 
 export function UploadDropzone({
     onFilesSelected,
     onFileRemoved,
     onReset,
-    isProcessing = false
+    isProcessing = false,
+    isCompleted = false
 }: UploadDropzoneProps) {
     const [selectedFile, setSelectedFile] = useState<FileWithPath | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const dropzoneRef = useRef<HTMLDivElement>(null);
 
-    const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MiB
+    const MAX_SIZE_LABEL = '100 MB';
+
+    const { getRootProps, getInputProps, isDragActive, open, isDragReject } = useDropzone({
+        useFsAccessApi: false, // Critical for Electron to get full path
+        maxSize: MAX_SIZE_BYTES,
+        maxFiles: 1,
+        // We handle drop manually for robustness to guarantee file path, 
+        // but useDropzone handles click/input change and visual states
         onDrop: (acceptedFiles) => {
+            // This handler is primarily for when files are selected via CLICK (Browser Dialog)
+            // For drag and drop, the native handler below takes precedence usually
+            setError(null);
             if (acceptedFiles.length > 0) {
                 const file = acceptedFiles[0] as FileWithPath;
                 setSelectedFile(file);
-                onFilesSelected?.(acceptedFiles as FileWithPath[]);
+                onFilesSelected?.([file]);
             }
+        },
+        onDropRejected: (rejectedFiles) => {
+            handleRejections(rejectedFiles);
         },
         accept: {
             'application/vnd.ms-excel': ['.xls'],
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-            'text/csv': ['.csv']
         },
         multiple: false,
-        disabled: isProcessing
+        disabled: isProcessing,
+        noDrag: true // Disable React Dropzone's drag listeners so our native one has full control
     });
+
+    const handleRejections = (rejectedFiles: any[]) => {
+        let message = '';
+        if (rejectedFiles.length > 0) {
+            const isMaxFilesRejected = rejectedFiles.some((file: any) => file.errors && file.errors[0]?.code === 'too-many-files');
+            const isMaxSizeRejected = rejectedFiles.some((file: any) => file.errors && file.errors[0]?.code === 'file-too-large');
+            const isFileInvalidType = rejectedFiles.some((file: any) => file.errors && file.errors[0]?.code === 'file-invalid-type');
+
+            if (isMaxFilesRejected) {
+                message = `Solo se permite un archivo a la vez`;
+            } else if (isMaxSizeRejected) {
+                message = `El archivo excede el tamaño máximo de ${MAX_SIZE_LABEL}`;
+            } else if (isFileInvalidType) {
+                message = `Tipo de archivo no válido. Solo .xls, .xlsx`;
+            } else {
+                // Fallback for generic errors
+                message = rejectedFiles[0].errors?.[0]?.message || 'Archivo no válido';
+            }
+        }
+        setError(message);
+    };
+
+    // Native Drop Handler to bypass React Synthetic Events and ensure we get the Electron File object (with path)
+    useEffect(() => {
+        const dropzone = dropzoneRef.current;
+        if (!dropzone) return;
+
+        const handleNativeDrop = (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (isProcessing) return;
+
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+                setError(null);
+
+                // Manual Validation implementation since we bypassed useDropzone
+                // 1. Check Max Files
+                if (files.length > 1) {
+                    handleRejections([{ errors: [{ code: 'too-many-files', message: 'Too many files' }] }]);
+                    return;
+                }
+
+                const file = files[0];
+
+                // 2. Check Size
+                if (file.size > MAX_SIZE_BYTES) {
+                    handleRejections([{ errors: [{ code: 'file-too-large', message: 'File too large' }] }]);
+                    return;
+                }
+
+                // 3. Check Extension
+                const ext = file.name.split('.').pop()?.toLowerCase();
+                const validExtensions = ['xls', 'xlsx'];
+                if (!validExtensions.includes(ext || '')) {
+                    handleRejections([{ errors: [{ code: 'file-invalid-type', message: 'Invalid type' }] }]);
+                    return;
+                }
+
+                // Valid file!
+                console.log('Native Drop File:', file);
+                const fileWithPath = file as FileWithPath;
+                setSelectedFile(fileWithPath);
+                onFilesSelected?.([fileWithPath]);
+            }
+        };
+
+        const handleDragOver = (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = isProcessing ? 'none' : 'copy';
+            }
+            // Note: We rely on useDropzone for the 'isDragActive' visual state via onDragEnter/Leave which fire on bubbling? 
+            // Actually noDrag: true disables that. 
+            // We might lose the 'active' style with noDrag: true.
+            // But we need the path.
+            // Let's rely on CSS :hover or :active if React Dropzone doesn't update.
+            // Or remove noDrag: true if we accept double events, but preventDefault here.
+        };
+
+        dropzone.addEventListener('drop', handleNativeDrop);
+        dropzone.addEventListener('dragover', handleDragOver);
+
+        return () => {
+            dropzone.removeEventListener('drop', handleNativeDrop);
+            dropzone.removeEventListener('dragover', handleDragOver);
+        };
+    }, [isProcessing, onFilesSelected]); // Dependencies
 
     const handleRemoveFile = (e: React.MouseEvent) => {
         e.stopPropagation();
         setSelectedFile(null);
+        setError(null);
         onFileRemoved?.();
     };
 
     const handleReset = (e: React.MouseEvent) => {
         e.stopPropagation();
         setSelectedFile(null);
+        setError(null);
         onReset?.();
     };
 
@@ -57,29 +167,46 @@ export function UploadDropzone({
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
+    // Extract ref from getRootProps to merge
+    const { ref: dropzoneReactRef, ...rootProps } = getRootProps();
+
     // Show processing state with reset button
     if (isProcessing) {
         return (
-            <div className="upload-dropzone dropzone-processing">
+            <div
+                ref={dropzoneRef}
+                className={`upload-dropzone dropzone-processing ${isCompleted ? 'dropzone-completed' : ''}`}
+            >
                 <div className="dropzone-content">
-                    <div className="dropzone-icon dropzone-icon-processing">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                    <div className={`dropzone-icon ${isCompleted ? 'dropzone-icon-success' : 'dropzone-icon-processing'}`}>
+                        {isCompleted ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" />
+                                <polyline points="22 4 12 14.01 9 11.01" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        ) : (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        )}
                     </div>
 
-                    <h3 className="dropzone-title">Processing in Progress</h3>
+                    <h3 className="dropzone-title">
+                        {isCompleted ? 'Procesamiento Completado' : 'Procesamiento en Progreso'}
+                    </h3>
                     <p className="dropzone-description">
-                        {selectedFile?.name || 'Your file'} is being processed
+                        {selectedFile?.name || 'Tu archivo'} {isCompleted ? 'ha sido procesado exitosamente' : 'está siendo procesado'}
                     </p>
 
                     <button
-                        className="btn btn-secondary dropzone-button"
+                        className={`btn ${isCompleted ? 'btn-primary' : 'btn-secondary'} dropzone-button`}
                         type="button"
                         onClick={handleReset}
+                        disabled={!isCompleted}
+                        style={{ opacity: !isCompleted ? 0.5 : 1, cursor: !isCompleted ? 'not-allowed' : 'pointer' }}
                     >
-                        Process Another File
+                        Procesar Otro Archivo
                     </button>
                 </div>
             </div>
@@ -88,8 +215,14 @@ export function UploadDropzone({
 
     return (
         <div
-            {...getRootProps()}
-            className={`upload-dropzone ${isDragActive ? 'dropzone-dragover' : ''} ${selectedFile ? 'dropzone-has-file' : ''}`}
+            {...rootProps}
+            ref={(node) => {
+                // Merge refs
+                dropzoneRef.current = node;
+                if (typeof dropzoneReactRef === 'function') dropzoneReactRef(node);
+                else if (dropzoneReactRef) (dropzoneReactRef as any).current = node;
+            }}
+            className={`upload-dropzone ${isDragActive ? 'dropzone-dragover' : ''} ${isDragReject ? 'dropzone-reject' : ''} ${selectedFile ? 'dropzone-has-file' : ''} ${error ? 'dropzone-error' : ''}`}
         >
             <input {...getInputProps()} className="dropzone-input" />
 
@@ -112,7 +245,7 @@ export function UploadDropzone({
                         type="button"
                         className="dropzone-remove-btn"
                         onClick={handleRemoveFile}
-                        aria-label="Remove file"
+                        aria-label="Eliminar archivo"
                     >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round" strokeLinejoin="round" />
@@ -130,10 +263,23 @@ export function UploadDropzone({
                         </svg>
                     </div>
 
-                    <h3 className="dropzone-title">Drag and Drop Excel Files Here</h3>
+                    <h3 className="dropzone-title">Arrastra y Suelta Archivos Excel Aquí</h3>
                     <p className="dropzone-description">
-                        Or click to browse your computer. Supported formats: .xls, .xlsx, .csv
+                        O haz clic para buscar en tu computadora. Formatos soportados: .xls, .xlsx
                     </p>
+
+                    {error && (
+                        <div className="dropzone-error-message" style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" strokeLinejoin="round"></line>
+                                </svg>
+                                {error}
+                            </span>
+                        </div>
+                    )}
 
                     <button
                         className="btn btn-primary dropzone-button"
@@ -143,11 +289,10 @@ export function UploadDropzone({
                             open();
                         }}
                     >
-                        Browse Files
+                        Buscar Archivos
                     </button>
                 </div>
             )}
         </div>
     );
 }
-

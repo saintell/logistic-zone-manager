@@ -44,69 +44,162 @@ def main():
         # Create new DataFrame with only required columns
         df_filtered = df[required_columns].copy()
 
-        # Normalize addresses using Gemini API
+        # Get original addresses before any processing
+        original_addresses = df_filtered['Dirección cliente'].astype(str).tolist()
+        
+        # Check cache FIRST before any processing (normalization, geocoding, zones)
         try:
-            from address_normalizer import normalize_addresses
+            from address_cache import lookup_addresses_in_cache, cache_multiple_records
             
-            addresses = df_filtered['Dirección cliente'].astype(str).tolist()
-            print(json.dumps({"status": "normalizing", "count": len(addresses)})) # Optional progress log
+            print(json.dumps({"status": "checking_cache", "count": len(original_addresses)}))
             
-            normalized_addresses = normalize_addresses(addresses)
+            # Check cache using ORIGINAL addresses (before normalization)
+            cached_results, uncached_indices = lookup_addresses_in_cache(original_addresses)
             
-            df_filtered['Dirección cliente'] = normalized_addresses
+            # Initialize result lists
+            normalized_addresses = [''] * len(original_addresses)
+            latitudes = [None] * len(original_addresses)
+            longitudes = [None] * len(original_addresses)
+            zones = [''] * len(original_addresses)
             
-        except ImportError:
-             print(json.dumps({"warning": "Address normalizer module not found. Skipping normalization."}))
+            # Fill in cached data
+            cache_hits = 0
+            for i, cached in enumerate(cached_results):
+                if cached is not None:
+                    normalized_addresses[i] = cached.get('normalized_address', original_addresses[i])
+                    latitudes[i] = cached.get('lat', '')
+                    longitudes[i] = cached.get('lng', '')
+                    zones[i] = cached.get('zone', '')
+                    cache_hits += 1
+            
+            print(json.dumps({"status": "cache_lookup_complete", "hits": cache_hits, "misses": len(uncached_indices)}))
+            
+        except ImportError as ie:
+            print(json.dumps({"warning": f"Cache module not found: {ie}. Processing all addresses."}))
+            uncached_indices = list(range(len(original_addresses)))
+            normalized_addresses = [''] * len(original_addresses)
+            latitudes = [None] * len(original_addresses)
+            longitudes = [None] * len(original_addresses)
+            zones = [''] * len(original_addresses)
         except Exception as e:
-             print(json.dumps({"warning": f"Address normalization failed: {e}. Using original addresses."}))
+            print(json.dumps({"warning": f"Cache lookup failed: {e}. Processing all addresses."}))
+            uncached_indices = list(range(len(original_addresses)))
+            normalized_addresses = [''] * len(original_addresses)
+            latitudes = [None] * len(original_addresses)
+            longitudes = [None] * len(original_addresses)
+            zones = [''] * len(original_addresses)
 
-        # Geocode addresses to get coordinates
-        try:
-            from address_geocoder import geocode_addresses
-            
-            addresses_to_geocode = df_filtered['Dirección cliente'].astype(str).tolist()
-            print(json.dumps({"status": "geocoding", "count": len(addresses_to_geocode)}))
-            
-            coordinates = geocode_addresses(addresses_to_geocode)
-            
-            df_filtered['Latitud'] = [c.get('lat', '') for c in coordinates]
-            df_filtered['Longitud'] = [c.get('lng', '') for c in coordinates]
-            
-        except ImportError:
-             print(json.dumps({"warning": "Address geocoder module not found. Skipping geocoding."}))
-             df_filtered['Latitud'] = ''
-             df_filtered['Longitud'] = ''
-        except Exception as e:
-             print(json.dumps({"warning": f"Geocoding failed: {e}. Skipping coordinates."}))
-             df_filtered['Latitud'] = ''
-             df_filtered['Longitud'] = ''
+        # Normalize ONLY uncached addresses
+        if uncached_indices:
+            try:
+                from address_normalizer import normalize_addresses as normalize_fn
+                
+                uncached_original = [original_addresses[i] for i in uncached_indices]
+                print(json.dumps({"status": "normalizing", "count": len(uncached_original)}))
+                
+                normalized_result = normalize_fn(uncached_original)
+                
+                # Fill in normalized addresses for uncached records
+                for idx, norm_addr in zip(uncached_indices, normalized_result):
+                    normalized_addresses[idx] = norm_addr
+                    
+            except ImportError:
+                print(json.dumps({"warning": "Address normalizer module not found. Using original addresses."}))
+                for idx in uncached_indices:
+                    normalized_addresses[idx] = original_addresses[idx]
+            except Exception as e:
+                print(json.dumps({"warning": f"Address normalization failed: {e}. Using original addresses."}))
+                for idx in uncached_indices:
+                    normalized_addresses[idx] = original_addresses[idx]
+        
+        # Update DataFrame with normalized addresses
+        df_filtered['Dirección cliente'] = normalized_addresses
 
-        # Assign zones based on coordinates
-        try:
-            from zone_assigner import assign_zones_to_records
-            
-            latitudes = df_filtered['Latitud'].tolist()
-            longitudes = df_filtered['Longitud'].tolist()
-            print(json.dumps({"status": "assigning_zones", "count": len(latitudes)}))
-            
-            zones = assign_zones_to_records(latitudes, longitudes)
-            df_filtered['Zona'] = zones
-            
-        except ImportError:
-             print(json.dumps({"warning": "Zone assigner module not found. Skipping zone assignment."}))
-             df_filtered['Zona'] = ''
-        except Exception as e:
-             print(json.dumps({"warning": f"Zone assignment failed: {e}. Skipping zones."}))
-             df_filtered['Zona'] = ''
+        # Geocode ONLY uncached addresses
+        if uncached_indices:
+            try:
+                from address_geocoder import geocode_addresses
+                
+                # Use normalized addresses for geocoding
+                uncached_normalized = [normalized_addresses[i] for i in uncached_indices]
+                print(json.dumps({"status": "geocoding", "count": len(uncached_normalized)}))
+                
+                geocoded_coords = geocode_addresses(uncached_normalized)
+                
+                # Fill in geocoded coordinates
+                for idx, coord in zip(uncached_indices, geocoded_coords):
+                    latitudes[idx] = coord.get('lat', '')
+                    longitudes[idx] = coord.get('lng', '')
+                    
+            except ImportError:
+                print(json.dumps({"warning": "Address geocoder module not found. Skipping geocoding."}))
+            except Exception as e:
+                print(json.dumps({"warning": f"Geocoding failed: {e}. Skipping coordinates."}))
+        
+        df_filtered['Latitud'] = latitudes
+        df_filtered['Longitud'] = longitudes
 
-        # Generate output file path
-        directory = os.path.dirname(file_path)
+        # Assign zones ONLY for uncached records
+        if uncached_indices:
+            try:
+                from zone_assigner import assign_zones_to_records
+                
+                uncached_lats = [latitudes[i] for i in uncached_indices]
+                uncached_lngs = [longitudes[i] for i in uncached_indices]
+                print(json.dumps({"status": "assigning_zones", "count": len(uncached_indices)}))
+                
+                assigned_zones = assign_zones_to_records(uncached_lats, uncached_lngs)
+                
+                # Fill in assigned zones
+                for idx, zone in zip(uncached_indices, assigned_zones):
+                    zones[idx] = zone
+                    
+            except ImportError:
+                print(json.dumps({"warning": "Zone assigner module not found. Skipping zone assignment."}))
+            except Exception as e:
+                print(json.dumps({"warning": f"Zone assignment failed: {e}. Skipping zones."}))
+        
+        df_filtered['Zona'] = zones
+        
+        # Cache the newly processed records (using ORIGINAL address as key)
+        if uncached_indices:
+            try:
+                from address_cache import cache_multiple_records
+                
+                new_records = []
+                for idx in uncached_indices:
+                    lat_val = latitudes[idx]
+                    lng_val = longitudes[idx]
+                    
+                    new_records.append({
+                        "original_address": original_addresses[idx],
+                        "normalized_address": normalized_addresses[idx],
+                        "lat": lat_val if lat_val != '' else None,
+                        "lng": lng_val if lng_val != '' else None,
+                        "zone": zones[idx]
+                    })
+                
+                cache_multiple_records(new_records)
+                print(json.dumps({"status": "cache_updated", "new_records": len(new_records)}))
+            except Exception as e:
+                print(json.dumps({"warning": f"Failed to cache records: {e}"}))
+
+        # Determine output directory
+        output_dir = input_data.get('outputDir')
+        
+        if output_dir and os.path.isdir(output_dir):
+            target_dir = output_dir
+        else:
+            # Fallback to temp if no valid output dir provided (though frontend should enforce it)
+            import tempfile
+            target_dir = tempfile.gettempdir()
+
         filename = os.path.basename(file_path)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         new_filename = f"processed_{timestamp}_{filename}"
-        output_path = os.path.join(directory, new_filename)
+        output_path = os.path.join(target_dir, new_filename)
 
-        # Save to new Excel file
+        # Save to Excel file
         df_filtered.to_excel(output_path, index=False)
             
         # Return the processed file path

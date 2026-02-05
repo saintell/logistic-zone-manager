@@ -16,6 +16,7 @@ dist
 dist-ssr
 dist-electron
 *.local
+address_cache.json
 
 # Editor directories and files
 .vscode/*
