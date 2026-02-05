@@ -1,0 +1,68 @@
+[
+  {
+    "id": "zone-1770259967699",
+    "name": "Test",
+    "points": [
+      {
+        "id": "north",
+        "label": "N",
+        "lat": "1,43",
+        "lng": "2,543"
+      },
+      {
+        "id": "east",
+        "label": "E",
+        "lat": "2",
+        "lng": "3,7"
+      },
+      {
+        "id": "south",
+        "label": "S",
+        "lat": "3",
+        "lng": "4,8"
+      },
+      {
+        "id": "west",
+        "label": "W",
+        "lat": "5",
+        "lng": "6,0"
+      }
+    ]
+  },
+  {
+    "id": "zone-1770260595093",
+    "name": "test2",
+    "points": [
+      {
+        "id": "north",
+        "label": "N",
+        "lat": "9",
+        "lng": "8"
+      },
+      {
+        "id": "east",
+        "label": "E",
+        "lat": "8",
+        "lng": "7"
+      },
+      {
+        "id": "south",
+        "label": "S",
+        "lat": "7",
+        "lng": "6"
+      },
+      {
+        "id": "west",
+        "label": "W",
+        "lat": "6",
+        "lng": "5"
+      },
+      {
+        "id": "point-1770260592051",
+        "label": "P5",
+        "lat": "5",
+        "lng": "4"
+      }
+    ]
+  }
+]

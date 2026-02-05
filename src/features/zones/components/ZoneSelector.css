@@ -1,0 +1,274 @@
+/* Zone Selector Component Styles */
+
+.zone-selector {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.zone-selector-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-4) var(--spacing-6);
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.zone-selector-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.zone-selector-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--spacing-1);
+}
+
+.zone-selector-region {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.zone-selector-region-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-primary);
+}
+
+.zone-selector-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+}
+
+.zone-add-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.zone-add-btn svg {
+    flex-shrink: 0;
+}
+
+/* Zone List */
+.zone-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.zone-item {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-4) var(--spacing-6);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    border-bottom: 1px solid var(--color-border-light);
+    position: relative;
+}
+
+.zone-item:last-child {
+    border-bottom: none;
+}
+
+.zone-item:hover {
+    background-color: var(--color-bg-card-hover);
+}
+
+.zone-item-selected {
+    background-color: var(--color-primary-light);
+}
+
+.zone-item-selected:hover {
+    background-color: var(--color-primary-light);
+}
+
+/* Zone Indicator - Left border accent */
+.zone-indicator {
+    width: 3px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    margin-right: var(--spacing-4);
+    flex-shrink: 0;
+}
+
+.zone-indicator-north {
+    background-color: #06b6d4;
+    /* Cyan */
+}
+
+.zone-indicator-south {
+    background-color: #8b5cf6;
+    /* Purple */
+}
+
+.zone-indicator-downtown {
+    background-color: #f59e0b;
+    /* Amber */
+}
+
+.zone-indicator-west {
+    background-color: #22c55e;
+    /* Green */
+}
+
+.zone-indicator-default {
+    background-color: var(--color-primary);
+}
+
+/* Zone Content */
+.zone-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.zone-name {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.zone-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+}
+
+.zone-stops {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.zone-stops-count {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+}
+
+.zone-coordinates {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-family: monospace;
+}
+
+/* Zone Icon (Chevron or selected indicator) */
+.zone-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    transition: color var(--transition-fast);
+}
+
+.zone-item:hover .zone-icon {
+    color: var(--color-text-secondary);
+}
+
+.zone-item-selected .zone-icon {
+    color: var(--color-primary);
+}
+
+/* Zone Checkbox */
+.zone-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-right: var(--spacing-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
+
+.zone-checkbox-checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.zone-checkbox-icon {
+    width: 12px;
+    height: 12px;
+    color: white;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.zone-checkbox-checked .zone-checkbox-icon {
+    opacity: 1;
+}
+
+/* Empty State */
+.zone-empty {
+    padding: var(--spacing-12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.zone-empty-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--color-text-muted);
+    margin-bottom: var(--spacing-4);
+}
+
+.zone-empty-title {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-2);
+}
+
+.zone-empty-description {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+/* Actions */
+.zone-selector-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-4) var(--spacing-6);
+    border-top: 1px solid var(--color-border-light);
+    background-color: var(--color-bg-secondary);
+}
+
+.zone-action-btn {
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.zone-action-btn:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-card-hover);
+}
+
+.zone-action-btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-text-primary);
+}
+
+.zone-action-btn-primary:hover {
+    background-color: var(--color-primary-hover);
+}

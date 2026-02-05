@@ -1,0 +1,65 @@
+/* Zones Page Styles */
+
+.zones-page {
+    padding: var(--spacing-8);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.zones-header {
+    margin-bottom: var(--spacing-8);
+}
+
+.zones-title {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-2);
+}
+
+.zones-description {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    max-width: 600px;
+}
+
+.zones-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+}
+
+.zones-map-placeholder {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-4);
+}
+
+.zones-map-icon {
+    width: 64px;
+    height: 64px;
+    color: var(--color-text-muted);
+}
+
+.zones-map-text {
+    font-size: var(--font-size-base);
+    color: var(--color-text-muted);
+}
+
+.zones-loading {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+}
