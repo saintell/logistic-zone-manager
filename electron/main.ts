@@ -1,10 +1,14 @@
-import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { configObject } from '../config/config'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const developMode = true;
+const exe_test = false;
+let extension = exe_test ? ".exe" : ".py";
+let exePath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'python-scripts') + path.sep;
 
 process.env.APP_ROOT = path.join(__dirname, '..')
 
@@ -56,3 +60,46 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(createWindow)
+
+ipcMain.on('dinamic_method', (event, arg) => {
+    let arg_parsed = JSON.parse(arg);
+    const findObject = configObject.find(item => item.process_name === arg_parsed.process);
+    if (findObject) {
+        let pythonProcess = developMode ? spawn('python', [exePath + findObject.fileName + extension, arg]) : spawn(exePath + findObject.fileName + '.exe', [arg]);
+        if (exe_test && developMode) {
+            pythonProcess = spawn(exePath + findObject.fileName + '.exe', [arg])
+        }
+
+        pythonProcess.stdout.on('data', (data) => {
+            console.log(`stdout: ${data.toString()}`);
+            // Validar si el objeto requiere renderizar cuadro de dialogo
+            if (findObject?.messageBox) {
+                const options = {
+                    type: 'error' as const,
+                    buttons: ['Ok'],
+                    title: findObject?.title,
+                    message: findObject?.message,
+                    detail: data.toString()
+                };
+                dialog.showMessageBox(null!, options).then(result => {
+                    console.log(result.response);
+                }).catch(err => {
+                    console.log(err);
+                });
+            }
+
+            event.reply(findObject.process_name, data.toString());
+
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+            dialog.showErrorBox('Error', `No se pudo obtener la información \n ${data.toString()}`);
+
+            console.error(`stderr: ${data.toString()}`);
+
+            event.reply(findObject.process_name, data.toString());
+
+        });
+    }
+
+})

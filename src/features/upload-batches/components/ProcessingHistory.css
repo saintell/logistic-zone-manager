@@ -1,0 +1,188 @@
+.processing-history {
+    margin-top: var(--spacing-10);
+}
+
+.processing-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-6);
+}
+
+.processing-history-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+}
+
+.view-all-link {
+    font-size: var(--font-size-sm);
+    color: var(--color-primary);
+}
+
+.history-table-container {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.history-table {
+    width: 100%;
+}
+
+.batch-name-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.file-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.file-icon svg {
+    width: 18px;
+    height: 18px;
+    color: white;
+}
+
+.batch-name-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.batch-name {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+}
+
+.batch-id {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    margin-right: var(--spacing-2);
+}
+
+.status-completed {
+    background-color: var(--color-success);
+}
+
+.status-failed {
+    background-color: var(--color-error);
+}
+
+.status-processing {
+    background-color: var(--color-primary);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+}
+
+.actions-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.btn-sm {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+}
+
+.btn-sm .icon {
+    width: 14px;
+    height: 14px;
+}
+
+.failed-actions {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+.icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-tertiary);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.icon-btn:hover {
+    background-color: var(--color-bg-card-hover);
+    color: var(--color-text-primary);
+}
+
+.icon-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.history-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-4) var(--spacing-4);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.history-count {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.pagination {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+.pagination-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    background-color: transparent;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-btn svg {
+    width: 16px;
+    height: 16px;
+}
