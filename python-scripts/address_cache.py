@@ -14,7 +14,7 @@ from typing import Optional, Dict, Any
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
+    stream=sys.stderr
 )
 logger = logging.getLogger(__name__)
 
@@ -263,3 +263,166 @@ def cache_multiple_records(
         )
     
     return save_cache(cache, cache_path)
+
+
+def main():
+    """Handle CLI arguments for cache management."""
+    if len(sys.argv) < 2:
+        return
+    
+    try:
+        input_data = json.loads(sys.argv[1])
+        action = input_data.get('action')
+        
+        if action == 'get_stats':
+            cache = load_cache()
+            records = cache.get('records', {})
+            stats = {
+                "success": True,
+                "totalRecords": len(records),
+                "lastUpdated": cache.get('metadata', {}).get('last_updated'),
+                "fileSize": os.path.getsize(CACHE_FILE_PATH) if os.path.exists(CACHE_FILE_PATH) else 0,
+                "filePath": CACHE_FILE_PATH
+            }
+            print(json.dumps(stats))
+            
+        elif action == 'get_records':
+            page = input_data.get('page', 1)
+            page_size = input_data.get('pageSize', 50)
+            search = input_data.get('search', '').lower()
+            
+            cache = load_cache()
+            records_dict = cache.get('records', {})
+            
+            # Convert dict to list for pagination
+            all_records = list(records_dict.values())
+            
+            # Filter if search term exists
+            if search:
+                all_records = [
+                    r for r in all_records 
+                    if search in r.get('original_address', '').lower() 
+                    or search in r.get('normalized_address', '').lower()
+                    or search in r.get('zone', '').lower()
+                ]
+            
+            # Sort by updated_at desc
+            all_records.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
+            
+            # Paginate
+            total_filtered = len(all_records)
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            paginated_records = all_records[start_idx:end_idx]
+            
+            print(json.dumps({
+                "success": True,
+                "records": paginated_records,
+                "total": total_filtered,
+                "page": page,
+                "pageSize": page_size
+            }))
+
+        elif action == 'add_record':
+            record_data = input_data.get('record', {})
+            original_addr = record_data.get('original_address')
+            
+            if not original_addr:
+                print(json.dumps({"success": False, "error": "Original address is required"}))
+                return
+
+            cache = load_cache()
+            updated_cache = cache_record(
+                original_address=original_addr,
+                normalized_address=record_data.get('normalized_address', ''),
+                lat=record_data.get('lat'),
+                lng=record_data.get('lng'),
+                zone=record_data.get('zone', ''),
+                cache=cache,
+                auto_save=True
+            )
+            print(json.dumps({"success": True, "message": "Record added successfully"}))
+
+        elif action == 'update_record':
+            key = input_data.get('key') # key is the original address of the record to update
+            updates = input_data.get('updates', {})
+            
+            if not key:
+                print(json.dumps({"success": False, "error": "Key (original address) is required"}))
+                return
+                
+            cache = load_cache()
+            # We reuse cache_record which handles update logic if hash matches
+            # Ideally we should check if it exists first if we want strict update
+            address_hash = get_address_hash(key)
+            if address_hash not in cache.get('records', {}):
+                 print(json.dumps({"success": False, "error": "Record not found"}))
+                 return
+
+            # Merge existing data with updates to ensure we don't lose fields not passed
+            existing = cache['records'][address_hash]
+            
+            updated_cache = cache_record(
+                original_address=key, # Key cannot change for now
+                normalized_address=updates.get('normalized_address', existing.get('normalized_address')),
+                lat=updates.get('lat', existing.get('lat')),
+                lng=updates.get('lng', existing.get('lng')),
+                zone=updates.get('zone', existing.get('zone')),
+                cache=cache,
+                auto_save=True
+            )
+            print(json.dumps({"success": True, "message": "Record updated successfully"}))
+
+        elif action == 'delete_record':
+            key = input_data.get('key')
+            if not key:
+                 print(json.dumps({"success": False, "error": "Key is required"}))
+                 return
+            
+            cache = load_cache()
+            address_hash = get_address_hash(key)
+            
+            if address_hash in cache.get('records', {}):
+                del cache['records'][address_hash]
+                if save_cache(cache):
+                    print(json.dumps({"success": True, "message": "Record deleted successfully"}))
+                else:
+                    print(json.dumps({"success": False, "error": "Failed to save cache"}))
+            else:
+                print(json.dumps({"success": False, "error": "Record not found"}))
+
+        elif action == 'clear_cache':
+            # Create empty cache structure
+            empty_cache = {
+                "records": {},
+                "metadata": {
+                    "total_records": 0,
+                    "last_updated": datetime.now().isoformat()
+                }
+            }
+            if save_cache(empty_cache):
+                print(json.dumps({
+                    "success": True, 
+                    "message": "Cache cleared successfully",
+                    "totalRecords": 0
+                }))
+            else:
+                print(json.dumps({
+                    "success": False, 
+                    "error": "Failed to save empty cache"
+                }))
+                
+        else:
+            print(json.dumps({
+                "success": False, 
+                "error": f"Unknown action: {action}"
+            }))
+            
+    except Exception as e:
+        print(json.dumps({
+            "success": False, 
+            "error": str(e)
+        }))
+
+if __name__ == "__main__":
+    main()

@@ -12,5 +12,12 @@ export const configObject = [
         messageBox: false,
         title: 'Gestión de Zonas',
         message: 'Operación de zonas',
+    },
+    {
+        process_name: 'address_cache',
+        fileName: 'address_cache',
+        messageBox: false,
+        title: 'Gestión de Caché',
+        message: 'Operación de caché',
     }
 ]

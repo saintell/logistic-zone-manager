@@ -79,49 +79,122 @@ ipcMain.on('dinamic_method', (event, arg) => {
 
         if (useExe) {
             pythonProcess = spawn(exeFile, [arg], {
-                env: { ...process.env }
+                env: { ...process.env },
+                cwd: pythonScriptsPath
             });
         } else if (usePy) {
             pythonProcess = spawn('python', [pyFile, arg], {
-                env: { ...process.env }
+                env: { ...process.env },
+                cwd: pythonScriptsPath
             });
         } else {
             dialog.showErrorBox('Error', `No se pudo encontrar el script o ejecutable para: ${scriptName}\nBuscado en: ${pythonScriptsPath}`);
             return;
         }
 
+        let outputBuffer = '';
+
         pythonProcess.stdout.on('data', (data) => {
-            console.log(`stdout: ${data.toString()}`);
-            if (findObject?.messageBox) {
-                const options = {
-                    type: 'error' as const,
-                    buttons: ['Ok'],
-                    title: findObject?.title,
-                    message: findObject?.message,
-                    detail: data.toString()
-                };
-                dialog.showMessageBox(null!, options).then(result => {
-                    console.log(result.response);
-                }).catch(err => {
-                    console.log(err);
-                });
+            const dataStr = data.toString();
+            outputBuffer += dataStr;
+
+            // Stream progress updates to renderer immediately
+            // Check if it looks like a JSON object or just forward everything
+            try {
+                // Try to parse to see if it's valid JSON, or just send raw strings
+                // The renderer handles splitting by newlines
+                event.reply(findObject.process_name, dataStr);
+            } catch (e) {
+                // If distinct chunks are partial JSON, the renderer buffering might handle it,
+                // or we can just emit. 
+                event.reply(findObject.process_name, dataStr);
             }
+        });
 
-            event.reply(findObject.process_name, data.toString());
-
+        pythonProcess.on('close', (code) => {
+            console.log(`Python process exited with code ${code}`);
+            if (code !== 0) {
+                console.error('Python process finished with errors');
+                // Optionally send an error message to the frontend if needed
+            }
+            // We don't need to send the full buffer at the end if we streamed it,
+            // UNLESS the frontend expects a specific "complete" message that wasn't sent.
+            // But usually the script sends a "success": true message at the end.
         });
 
         pythonProcess.stderr.on('data', (data) => {
-            dialog.showErrorBox('Error', `No se pudo obtener la información \n ${data.toString()}`);
-
             console.error(`stderr: ${data.toString()}`);
-
-            event.reply(findObject.process_name, data.toString());
-
+            // Do not reply with stderr, as it may contain logs
+            // Do not show error box for logs
         });
     }
 
 })
+
+ipcMain.handle('execute-python', async (_event, arg) => {
+    return new Promise((resolve, reject) => {
+        let arg_parsed;
+        try {
+            arg_parsed = JSON.parse(arg);
+        } catch (e) {
+            return reject('Invalid JSON argument');
+        }
+
+        const findObject = configObject.find(item => item.process_name === arg_parsed.process);
+        if (!findObject) {
+            return reject(`Process not found: ${arg_parsed.process}`);
+        }
+
+        const scriptName = findObject.fileName;
+        const exeFile = path.join(pythonScriptsPath, scriptName + '.exe');
+        const pyFile = path.join(pythonScriptsPath, scriptName + '.py');
+
+        // In development, prioritize python script
+        const useExe = isPackaged && fs.existsSync(exeFile);
+        const usePy = !useExe && fs.existsSync(pyFile);
+
+        let pythonProcess;
+
+        if (useExe) {
+            pythonProcess = spawn(exeFile, [arg], {
+                env: { ...process.env },
+                cwd: pythonScriptsPath
+            });
+        } else if (usePy) {
+            pythonProcess = spawn('python', [pyFile, arg], {
+                env: { ...process.env },
+                cwd: pythonScriptsPath
+            });
+        } else {
+            return reject(`Script not found for: ${scriptName}`);
+        }
+
+        let outputBuffer = '';
+        let errorBuffer = '';
+
+        pythonProcess.stdout.on('data', (data) => {
+            outputBuffer += data.toString();
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+            const output = data.toString();
+            console.error(`[Python stderr]: ${output}`);
+            errorBuffer += output;
+        });
+
+        pythonProcess.on('close', (code) => {
+            if (code === 0) {
+                resolve(outputBuffer);
+            } else {
+                reject(`Process exited with code ${code}. Error: ${errorBuffer}`);
+            }
+        });
+
+        pythonProcess.on('error', (err) => {
+            reject(`Failed to start process: ${err.message}`);
+        });
+    });
+});
 
 ipcMain.handle('select-directory', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({

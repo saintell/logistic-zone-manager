@@ -32,11 +32,8 @@
         ]
       },
       {
-        "from": "config",
-        "to": "config",
-        "filter": [
-          "**/*"
-        ]
+        "from": ".env",
+        "to": "python-scripts/.env"
       },
       "public/icon.ico"
     ],

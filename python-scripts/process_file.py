@@ -51,7 +51,7 @@ def main():
         try:
             from address_cache import lookup_addresses_in_cache, cache_multiple_records
             
-            print(json.dumps({"status": "checking_cache", "count": len(original_addresses)}))
+            print(json.dumps({"status": "checking_cache", "count": len(original_addresses)}), flush=True)
             
             # Check cache using ORIGINAL addresses (before normalization)
             cached_results, initial_uncached_indices = lookup_addresses_in_cache(original_addresses)
@@ -99,7 +99,7 @@ def main():
             print(json.dumps({"status": "cache_lookup_complete", 
                               "hits": cache_hits, 
                               "need_normalization": len(indices_to_normalize),
-                              "need_geocoding_only": len(indices_to_geocode)}))
+                              "need_geocoding_only": len(indices_to_geocode)}), flush=True)
             
         except ImportError as ie:
             print(json.dumps({"warning": f"Cache module not found: {ie}. Processing all addresses."}))
@@ -124,7 +124,7 @@ def main():
                 from address_normalizer import normalize_addresses as normalize_fn
                 
                 to_normalize_original = [original_addresses[i] for i in indices_to_normalize]
-                print(json.dumps({"status": "normalizing", "count": len(to_normalize_original)}))
+                print(json.dumps({"status": "normalizing", "count": len(to_normalize_original)}), flush=True)
                 
                 normalized_result = normalize_fn(to_normalize_original)
                 
@@ -157,7 +157,7 @@ def main():
                 
                 # Use normalized addresses for geocoding
                 to_geocode_normalized = [normalized_addresses[i] for i in indices_to_geocode]
-                print(json.dumps({"status": "geocoding", "count": len(to_geocode_normalized)}))
+                print(json.dumps({"status": "geocoding", "count": len(to_geocode_normalized)}), flush=True)
                 
                 geocoded_coords = geocode_addresses(to_geocode_normalized)
                 
@@ -182,7 +182,7 @@ def main():
                 
                 proc_lats = [latitudes[i] for i in indices_processed]
                 proc_lngs = [longitudes[i] for i in indices_processed]
-                print(json.dumps({"status": "assigning_zones", "count": len(indices_processed)}))
+                print(json.dumps({"status": "assigning_zones", "count": len(indices_processed)}), flush=True)
                 
                 assigned_zones = assign_zones_to_records(proc_lats, proc_lngs)
                 
@@ -216,7 +216,7 @@ def main():
                     })
                 
                 cache_multiple_records(new_records)
-                print(json.dumps({"status": "cache_updated", "new_records": len(new_records)}))
+                print(json.dumps({"status": "cache_updated", "new_records": len(new_records)}), flush=True)
             except Exception as e:
                 print(json.dumps({"warning": f"Failed to cache records: {e}"}))
 
@@ -263,7 +263,7 @@ def main():
             "error": str(e)
         }
         
-    print(json.dumps(result))
+    print(json.dumps(result), flush=True)
     sys.exit(0)
 
 if __name__ == "__main__":
