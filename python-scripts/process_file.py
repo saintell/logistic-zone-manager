@@ -152,6 +152,14 @@ def main():
 
         # Geocode everything in indices_to_geocode (partials + newly normalized)
         if indices_to_geocode:
+            # Check for API Key
+            from dotenv import load_dotenv
+            load_dotenv()
+            
+            api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+            if not api_key:
+                raise ValueError("GOOGLE_MAPS_API_KEY not found in environment variables. Please check your .env file.")
+
             try:
                 from address_geocoder import geocode_addresses
                 
@@ -197,28 +205,42 @@ def main():
         
         df_filtered['Zona'] = zones
         
-        # Cache the newly processed records
-        if indices_processed:
-            try:
-                from address_cache import cache_multiple_records
+        # Cache ALL valid records (not just newly processed ones)
+        # This ensures that records from cache also get updated with tracking_number and cliente
+        try:
+            from address_cache import cache_multiple_records
+            
+            # Get tracking numbers and clientes from DataFrame
+            tracking_numbers = df_filtered['Tracking number'].astype(str).tolist()
+            clientes = df_filtered['Cliente'].astype(str).tolist()
+            
+            # Find all records with valid data (coordinates and zone)
+            records_to_cache = []
+            for idx in range(len(original_addresses)):
+                lat_val = latitudes[idx]
+                lng_val = longitudes[idx]
                 
-                new_records = []
-                for idx in indices_processed:
-                    lat_val = latitudes[idx]
-                    lng_val = longitudes[idx]
-                    
-                    new_records.append({
+                # Only cache if we have valid coordinates
+                if lat_val is not None and lng_val is not None and lat_val != '' and lng_val != '':
+                    records_to_cache.append({
                         "original_address": original_addresses[idx],
                         "normalized_address": normalized_addresses[idx],
-                        "lat": lat_val if lat_val != '' else None,
-                        "lng": lng_val if lng_val != '' else None,
-                        "zone": zones[idx]
+                        "lat": lat_val,
+                        "lng": lng_val,
+                        "zone": zones[idx],
+                        "tracking_number": tracking_numbers[idx],
+                        "cliente": clientes[idx]
                     })
-                
-                cache_multiple_records(new_records)
-                print(json.dumps({"status": "cache_updated", "new_records": len(new_records)}), flush=True)
-            except Exception as e:
-                print(json.dumps({"warning": f"Failed to cache records: {e}"}))
+            
+            if records_to_cache:
+                cache_multiple_records(records_to_cache)
+                print(json.dumps({
+                    "status": "cache_updated", 
+                    "new_records": len([i for i in indices_processed]) if indices_processed else 0,
+                    "total_cached": len(records_to_cache)
+                }), flush=True)
+        except Exception as e:
+            print(json.dumps({"warning": f"Failed to cache records: {e}"}))
 
         # Determine output directory
         output_dir = input_data.get('outputDir')
@@ -235,8 +257,45 @@ def main():
         new_filename = f"processed_{timestamp}_{filename}"
         output_path = os.path.join(target_dir, new_filename)
 
-        # Save to Excel file
+        # Save to Excel file (Master file)
         df_filtered.to_excel(output_path, index=False)
+
+        # Process and save individual files for each zone
+        # Get unique zones
+        unique_zones = df_filtered['Zona'].unique()
+
+        # Check if there are any valid zones (non-empty, non-NaN)
+        # If all records have no zone, we skip creating the 'Sin Zona' folder
+        valid_zones_exist = any(not pd.isna(z) and str(z).strip() != "" for z in unique_zones)
+
+        if valid_zones_exist:
+            for zone in unique_zones:
+                # Handle empty/NaN zones
+                if pd.isna(zone) or zone == "":
+                    zone_name = "Sin Zona"
+                    # Filter either NaN or empty string
+                    zone_df = df_filtered[df_filtered['Zona'].isna() | (df_filtered['Zona'] == "")]
+                else:
+                    zone_name = str(zone).strip()
+                    # Remove invalid characters for directory names
+                    safe_zone_name = "".join([c for c in zone_name if c.isalnum() or c in (' ', '-', '_')]).strip()
+                    if not safe_zone_name:
+                        safe_zone_name = "Unnamed_Zone"
+                    zone_name = safe_zone_name
+                    zone_df = df_filtered[df_filtered['Zona'] == zone]
+                
+                # Create zone directory
+                zone_dir = os.path.join(target_dir, zone_name)
+                if not os.path.exists(zone_dir):
+                    os.makedirs(zone_dir)
+                
+                # Define output path for this zone
+                # Use the zone name as filename
+                zone_filename = f"{zone_name}.xlsx"
+                zone_output_path = os.path.join(zone_dir, zone_filename)
+                
+                # Save the zone-specific DataFrame
+                zone_df.to_excel(zone_output_path, index=False)
             
         # Return the processed file path
         result = {

@@ -27,6 +27,7 @@ export type ProcessingStepStatus = 'completed' | 'in-progress' | 'pending';
 export interface CurrentBatch {
     batchId: string;
     status: 'ready' | 'processing' | 'completed' | 'failed';
+    error?: string;
     steps: ProcessingStep[];
 }
 

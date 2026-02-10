@@ -142,6 +142,8 @@ def cache_record(
     lat: Optional[float],
     lng: Optional[float],
     zone: str,
+    tracking_number: Optional[str] = None,
+    cliente: Optional[str] = None,
     cache: Optional[Dict[str, Any]] = None,
     cache_path: str = CACHE_FILE_PATH,
     auto_save: bool = False
@@ -155,6 +157,8 @@ def cache_record(
         lat: Latitude coordinate
         lng: Longitude coordinate
         zone: Assigned zone name
+        tracking_number: Optional tracking number
+        cliente: Optional customer/client name
         cache: Optional pre-loaded cache dict. If None, loads from file.
         cache_path: Path to the cache file
         auto_save: If True, automatically saves the cache after adding
@@ -182,6 +186,8 @@ def cache_record(
         "lat": lat,
         "lng": lng,
         "zone": zone,
+        "tracking_number": tracking_number,
+        "cliente": cliente,
         "created_at": existing["created_at"] if existing else now,
         "updated_at": now
     }
@@ -244,6 +250,8 @@ def cache_multiple_records(
             - lat
             - lng
             - zone
+            - tracking_number (optional)
+            - cliente (optional)
         cache_path: Path to the cache file
     
     Returns:
@@ -258,6 +266,8 @@ def cache_multiple_records(
             lat=record.get("lat"),
             lng=record.get("lng"),
             zone=record.get("zone", ""),
+            tracking_number=record.get("tracking_number"),
+            cliente=record.get("cliente"),
             cache=cache,
             auto_save=False
         )
@@ -338,6 +348,8 @@ def main():
                 lat=record_data.get('lat'),
                 lng=record_data.get('lng'),
                 zone=record_data.get('zone', ''),
+                tracking_number=record_data.get('tracking_number'),
+                cliente=record_data.get('cliente'),
                 cache=cache,
                 auto_save=True
             )
@@ -368,6 +380,8 @@ def main():
                 lat=updates.get('lat', existing.get('lat')),
                 lng=updates.get('lng', existing.get('lng')),
                 zone=updates.get('zone', existing.get('zone')),
+                tracking_number=updates.get('tracking_number', existing.get('tracking_number')),
+                cliente=updates.get('cliente', existing.get('cliente')),
                 cache=cache,
                 auto_save=True
             )
@@ -390,6 +404,29 @@ def main():
                     print(json.dumps({"success": False, "error": "Failed to save cache"}))
             else:
                 print(json.dumps({"success": False, "error": "Record not found"}))
+
+        elif action == 'search_by_tracking':
+            tracking_number = input_data.get('tracking_number', '').strip()
+            
+            if not tracking_number:
+                print(json.dumps({"success": False, "error": "Tracking number is required"}))
+                return
+            
+            cache = load_cache()
+            records_dict = cache.get('records', {})
+            
+            # Filter records by tracking_number (partial match, case insensitive)
+            matching_records = [
+                r for r in records_dict.values()
+                if r.get('tracking_number', '') and 
+                   str(r.get('tracking_number', '')).lower().find(tracking_number.lower()) != -1
+            ]
+            
+            print(json.dumps({
+                "success": True,
+                "results": matching_records,
+                "count": len(matching_records)
+            }))
 
         elif action == 'clear_cache':
             # Create empty cache structure

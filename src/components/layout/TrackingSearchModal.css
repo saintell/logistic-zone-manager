@@ -1,0 +1,297 @@
+/* Tracking Search Modal Styles */
+
+.tracking-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.tracking-modal-container {
+    background: var(--color-bg-primary);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.25s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.tracking-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tracking-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.tracking-modal-close-btn {
+    background: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all 0.2s;
+}
+
+.tracking-modal-close-btn:hover {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text);
+}
+
+.tracking-modal-close-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.tracking-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Search Section */
+.tracking-search-section {
+    margin-bottom: 1.5rem;
+}
+
+.tracking-search-input-group {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.tracking-search-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text);
+    transition: all 0.2s;
+}
+
+.tracking-search-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.tracking-search-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+.spinner-small {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error Message */
+.tracking-error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    margin-bottom: 1.5rem;
+}
+
+.tracking-error-message svg {
+    flex-shrink: 0;
+}
+
+/* Results Section */
+.tracking-results-section {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tracking-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--color-border);
+}
+
+.tracking-results-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.tracking-results-count {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    background-color: var(--color-bg-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+}
+
+/* No Results */
+.tracking-no-results {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-muted);
+}
+
+.tracking-no-results svg {
+    margin-bottom: 1rem;
+    color: var(--color-text-muted);
+    opacity: 0.5;
+}
+
+.tracking-no-results p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Results List */
+.tracking-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.tracking-result-card {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s;
+}
+
+.tracking-result-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tracking-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    gap: 1rem;
+}
+
+.tracking-result-row:not(:last-child) {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tracking-result-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    min-width: 140px;
+    flex-shrink: 0;
+}
+
+.tracking-result-value {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    text-align: right;
+    word-break: break-word;
+}
+
+.tracking-highlight {
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.tracking-zone {
+    display: inline-block;
+    background-color: var(--color-primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.tracking-coords {
+    font-family: monospace;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .tracking-modal-container {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .tracking-search-input-group {
+        flex-direction: column;
+    }
+
+    .tracking-result-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .tracking-result-label {
+        min-width: auto;
+    }
+
+    .tracking-result-value {
+        text-align: left;
+    }
+}

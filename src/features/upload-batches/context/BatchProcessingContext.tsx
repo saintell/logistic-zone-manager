@@ -145,6 +145,7 @@ export function BatchProcessingProvider({ children }: { children: ReactNode }) {
                             return {
                                 ...prev,
                                 status: 'failed',
+                                error: parsed.error // Capture error message
                             };
                         });
                     }

@@ -34,6 +34,7 @@ export function UploadBatchesPage() {
                         onReset={handleReset}
                         isProcessing={isProcessing}
                         isCompleted={currentBatch?.status === 'completed'}
+                        hasFailed={currentBatch?.status === 'failed'}
                     />
                     <BatchStatus
                         batch={currentBatch}

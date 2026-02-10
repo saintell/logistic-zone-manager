@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { SettingsModal } from './SettingsModal';
+import { TrackingSearchModal } from './TrackingSearchModal';
 import './Header.css';
 
 export function Header() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isTrackingSearchOpen, setIsTrackingSearchOpen] = useState(false);
 
     return (
         <>
@@ -42,6 +44,16 @@ export function Header() {
                     <div className="header-right">
                         <button
                             className="header-icon-btn"
+                            onClick={() => setIsTrackingSearchOpen(true)}
+                            data-tooltip="Buscar por Tracking"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="m21 21-4.35-4.35" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+                        <button
+                            className="header-icon-btn"
                             onClick={() => setIsSettingsOpen(true)}
                             data-tooltip="Gestionar Caché"
                         >
@@ -54,6 +66,10 @@ export function Header() {
                 </div>
             </header>
 
+            <TrackingSearchModal
+                isOpen={isTrackingSearchOpen}
+                onClose={() => setIsTrackingSearchOpen(false)}
+            />
             <SettingsModal
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}

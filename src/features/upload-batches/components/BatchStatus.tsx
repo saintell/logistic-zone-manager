@@ -109,6 +109,20 @@ export function BatchStatus({ batch, hasFile = false, onStartProcessing, outputF
                 </span>
             </div>
 
+            {batch.status === 'failed' && batch.error && (
+                <div style={{
+                    backgroundColor: '#fee2e2',
+                    border: '1px solid #ef4444',
+                    color: '#b91c1c',
+                    padding: '0.75rem',
+                    borderRadius: '0.375rem',
+                    marginBottom: '1rem',
+                    fontSize: '0.9rem'
+                }}>
+                    <strong>Error:</strong> {batch.error}
+                </div>
+            )}
+
             <div className="batch-status-timeline">
                 {batch.steps.map((step, index) => (
                     <div key={step.id} className={`timeline-step timeline-step-${step.status}`}>

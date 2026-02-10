@@ -14,6 +14,7 @@ interface UploadDropzoneProps {
     onReset?: () => void;
     isProcessing?: boolean;
     isCompleted?: boolean;
+    hasFailed?: boolean;
 }
 
 export function UploadDropzone({
@@ -22,7 +23,8 @@ export function UploadDropzone({
     onFileRemoved,
     onReset,
     isProcessing = false,
-    isCompleted = false
+    isCompleted = false,
+    hasFailed = false
 }: UploadDropzoneProps) {
     const [selectedFile, setSelectedFile] = useState<FileWithPath | null>((file as FileWithPath) || null);
 
@@ -181,17 +183,26 @@ export function UploadDropzone({
 
     // Show processing state with reset button
     if (isProcessing) {
+        const canReset = isCompleted || hasFailed;
+        const showError = hasFailed && !isCompleted;
+
         return (
             <div
                 ref={dropzoneRef}
-                className={`upload-dropzone dropzone-processing ${isCompleted ? 'dropzone-completed' : ''}`}
+                className={`upload-dropzone dropzone-processing ${isCompleted ? 'dropzone-completed' : ''} ${showError ? 'dropzone-error' : ''}`}
             >
                 <div className="dropzone-content">
-                    <div className={`dropzone-icon ${isCompleted ? 'dropzone-icon-success' : 'dropzone-icon-processing'}`}>
+                    <div className={`dropzone-icon ${isCompleted ? 'dropzone-icon-success' : showError ? 'dropzone-icon-error' : 'dropzone-icon-processing'}`}>
                         {isCompleted ? (
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" />
                                 <polyline points="22 4 12 14.01 9 11.01" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        ) : showError ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+                                <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         ) : (
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -202,18 +213,18 @@ export function UploadDropzone({
                     </div>
 
                     <h3 className="dropzone-title">
-                        {isCompleted ? 'Procesamiento Completado' : 'Procesamiento en Progreso'}
+                        {isCompleted ? 'Procesamiento Completado' : showError ? 'Error en el Procesamiento' : 'Procesamiento en Progreso'}
                     </h3>
                     <p className="dropzone-description">
-                        {selectedFile?.name || 'Tu archivo'} {isCompleted ? 'ha sido procesado exitosamente' : 'está siendo procesado'}
+                        {selectedFile?.name || 'Tu archivo'} {isCompleted ? 'ha sido procesado exitosamente' : showError ? 'no pudo ser procesado' : 'está siendo procesado'}
                     </p>
 
                     <button
                         className={`btn ${isCompleted ? 'btn-primary' : 'btn-secondary'} dropzone-button`}
                         type="button"
                         onClick={handleReset}
-                        disabled={!isCompleted}
-                        style={{ opacity: !isCompleted ? 0.5 : 1, cursor: !isCompleted ? 'not-allowed' : 'pointer' }}
+                        disabled={!canReset}
+                        style={{ opacity: !canReset ? 0.5 : 1, cursor: !canReset ? 'not-allowed' : 'pointer' }}
                     >
                         Procesar Otro Archivo
                     </button>
