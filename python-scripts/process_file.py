@@ -79,10 +79,10 @@ def main():
                     
                     # Check for valid coordinates
                     if lat is not None and lng is not None and lat != '' and lng != '':
-                        # Full valid record found
+                        # Full valid record found - coordinates from cache
                         latitudes[i] = lat
                         longitudes[i] = lng
-                        zones[i] = cached.get('zone', '')
+                        # Don't use cached zone - will recalculate below to catch new zones
                         cache_hits += 1
                     else:
                         # Missing coordinates
@@ -182,20 +182,28 @@ def main():
         df_filtered['Latitud'] = latitudes
         df_filtered['Longitud'] = longitudes
 
-        # Assign zones & Cache - applied to all that were processed (geocoded)
-        indices_processed = indices_to_geocode 
-        if indices_processed:
+        # Assign zones to ALL records with valid coordinates (including cached ones)
+        # This ensures that if zones.json is updated, cached records get new zones
+        indices_with_coords = [
+            i for i in range(len(latitudes))
+            if latitudes[i] is not None and latitudes[i] != '' and 
+               longitudes[i] is not None and longitudes[i] != ''
+        ]
+        
+        indices_processed = indices_to_geocode  # Track which were newly geocoded
+        
+        if indices_with_coords:
             try:
                 from zone_assigner import assign_zones_to_records
                 
-                proc_lats = [latitudes[i] for i in indices_processed]
-                proc_lngs = [longitudes[i] for i in indices_processed]
-                print(json.dumps({"status": "assigning_zones", "count": len(indices_processed)}), flush=True)
+                coords_lats = [latitudes[i] for i in indices_with_coords]
+                coords_lngs = [longitudes[i] for i in indices_with_coords]
+                print(json.dumps({"status": "assigning_zones", "count": len(indices_with_coords)}), flush=True)
                 
-                assigned_zones = assign_zones_to_records(proc_lats, proc_lngs)
+                assigned_zones = assign_zones_to_records(coords_lats, coords_lngs)
                 
-                # Fill in assigned zones
-                for idx, zone in zip(indices_processed, assigned_zones):
+                # Fill in assigned zones for ALL records with coordinates
+                for idx, zone in zip(indices_with_coords, assigned_zones):
                     zones[idx] = zone
                     
             except ImportError:
@@ -290,8 +298,9 @@ def main():
                     os.makedirs(zone_dir)
                 
                 # Define output path for this zone
-                # Use the zone name as filename
-                zone_filename = f"{zone_name}.xlsx"
+                # Use the zone name + timestamp as filename
+                zone_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                zone_filename = f"{zone_name}_{zone_timestamp}.xlsx"
                 zone_output_path = os.path.join(zone_dir, zone_filename)
                 
                 # Save the zone-specific DataFrame
