@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "dist": "npm run build && electron-builder"
+    "check-env": "node scripts/check-env.js",
+    "dist": "npm run check-env && npm run build && electron-builder"
   },
   "build": {
     "appId": "com.logistic.zonemanager",
