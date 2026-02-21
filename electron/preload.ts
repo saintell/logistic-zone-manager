@@ -1,4 +1,4 @@
-import { ipcRenderer, contextBridge } from 'electron'
+import { ipcRenderer, contextBridge, webUtils } from 'electron'
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
@@ -20,4 +20,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     },
 
     // You can expose other weird stuff too
+    getFilePath(file: File) {
+        return webUtils.getPathForFile(file)
+    },
 })

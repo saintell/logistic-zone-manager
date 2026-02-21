@@ -8,14 +8,17 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-package-lock.json
+__pycache__
 
 # Dependency directories
 node_modules
 dist
 dist-ssr
 dist-electron
+dist_electron
 *.local
+*.exe
+address_cache.json
 
 # Editor directories and files
 .vscode/*
@@ -27,3 +30,4 @@ dist-electron
 *.njsproj
 *.sln
 *.sw?
+*.env

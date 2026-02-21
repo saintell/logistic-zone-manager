@@ -1,0 +1,207 @@
+.batch-status {
+    padding: var(--spacing-6);
+}
+
+.batch-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-6);
+}
+
+.batch-status-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.batch-status-id {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.batch-status-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.timeline-step {
+    display: flex;
+    gap: var(--spacing-4);
+    padding: var(--spacing-3) 0;
+}
+
+.timeline-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.step-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.step-icon-completed {
+    color: var(--color-success);
+}
+
+.step-icon-progress {
+    background-color: var(--color-primary);
+    position: relative;
+}
+
+.step-icon-progress::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-bg-card);
+    border-radius: var(--radius-full);
+    transform: translate(-50%, -50%);
+}
+
+.step-icon-pending {
+    background-color: var(--color-bg-tertiary);
+    border: 2px solid var(--color-border);
+}
+
+.timeline-line {
+    width: 2px;
+    flex: 1;
+    min-height: 24px;
+    background-color: var(--color-border);
+    margin: var(--spacing-2) 0;
+}
+
+.timeline-step-completed .timeline-line {
+    background-color: var(--color-success);
+}
+
+.timeline-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.timeline-step-name {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.timeline-step-detail {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}
+
+.timeline-progress {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.progress-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--color-primary);
+    border-radius: var(--radius-full);
+    transition: width var(--transition-slow);
+}
+
+.progress-value {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* Ready state styles */
+.batch-status-ready {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--spacing-8) var(--spacing-4);
+}
+
+.batch-status-ready-icon {
+    width: 56px;
+    height: 56px;
+    color: var(--color-success, #10b981);
+    margin-bottom: var(--spacing-4);
+}
+
+.batch-status-ready-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.batch-status-ready-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-2);
+}
+
+.batch-status-ready-description {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-6);
+    max-width: 280px;
+}
+
+.btn-success {
+    background-color: var(--color-success, #10b981);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background-color: #059669;
+}
+
+.batch-status-start-btn {
+    padding: var(--spacing-3) var(--spacing-8);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Disabled state */
+.batch-status-ready-icon-disabled {
+    color: var(--color-text-disabled, #9ca3af);
+}
+
+.btn-disabled {
+    background-color: var(--color-bg-tertiary, #e5e7eb);
+    color: var(--color-text-disabled, #9ca3af);
+    border: none;
+    cursor: not-allowed;
+}
+
+.btn-disabled:hover {
+    background-color: var(--color-bg-tertiary, #e5e7eb);
+}
