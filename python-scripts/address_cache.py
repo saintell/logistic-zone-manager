@@ -9,6 +9,7 @@ import logging
 import sys
 from datetime import datetime
 from typing import Optional, Dict, Any
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(
@@ -449,6 +450,122 @@ def main():
                     "error": "Failed to save empty cache"
                 }))
                 
+        elif action == 'export_excel':
+            output_dir = input_data.get('output_dir')
+            if not output_dir:
+                print(json.dumps({"success": False, "error": "Output directory is required"}))
+                return
+                
+            cache = load_cache()
+            records_dict = cache.get('records', {})
+            
+            if not records_dict:
+                print(json.dumps({"success": False, "error": "No records in cache to export"}))
+                return
+                
+            # Convert dictionary of records to list
+            records_list = list(records_dict.values())
+            
+            try:
+                # Create DataFrame
+                df = pd.DataFrame(records_list)
+                
+                # Reorder columns for better readability if they exist
+                cols_order = ['original_address', 'normalized_address', 'lat', 'lng', 'zone', 'tracking_number', 'cliente', 'created_at', 'updated_at']
+                existing_cols = [c for c in cols_order if c in df.columns]
+                # Append any other columns that might be there
+                for c in df.columns:
+                    if c not in existing_cols:
+                        existing_cols.append(c)
+                df = df[existing_cols]
+                
+                # Generate filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"address_cache_export_{timestamp}.xlsx"
+                output_path = os.path.join(output_dir, filename)
+                
+                # Export to Excel
+                df.to_excel(output_path, index=False, engine='openpyxl')
+                
+                print(json.dumps({
+                    "success": True,
+                    "message": f"Cache exported correctly to {filename}",
+                    "path": output_path,
+                    "count": len(records_list)
+                }))
+                
+            except Exception as e:
+                print(json.dumps({"success": False, "error": f"Failed to export to Excel: {str(e)}"}))
+                
+        elif action == 'import_excel':
+            file_path = input_data.get('file_path')
+            
+            if not file_path or not os.path.exists(file_path):
+                print(json.dumps({"success": False, "error": "Valid Excel file path is required"}))
+                return
+                
+            try:
+                # Read Excel
+                df = pd.read_excel(file_path, engine='openpyxl')
+                
+                # Replace NaNs with None for JSON serialization
+                df = df.where(pd.notnull(df), None)
+                
+                # Required columns minimum
+                if 'original_address' not in df.columns:
+                    print(json.dumps({"success": False, "error": "Excel must contain an 'original_address' column"}))
+                    return
+                    
+                cache = load_cache()
+                initial_count = len(cache.get('records', {}))
+                
+                # Iterate rows and update cache
+                for _, row in df.iterrows():
+                    original_addr = str(row.get('original_address')) if row.get('original_address') is not None else ''
+                    if not original_addr:
+                        continue
+                        
+                    lat = row.get('lat')
+                    lng = row.get('lng')
+                    
+                    # Convert parsed coordinates if possible
+                    try:
+                        lat = float(lat) if lat is not None else None
+                        lng = float(lng) if lng is not None else None
+                    except (ValueError, TypeError):
+                        lat = None
+                        lng = None
+                    
+                    cache = cache_record(
+                        original_address=original_addr,
+                        normalized_address=str(row.get('normalized_address')) if row.get('normalized_address') is not None else '',
+                        lat=lat,
+                        lng=lng,
+                        zone=str(row.get('zone')) if row.get('zone') is not None else '',
+                        tracking_number=str(row.get('tracking_number')) if row.get('tracking_number') is not None else None,
+                        cliente=str(row.get('cliente')) if row.get('cliente') is not None else None,
+                        cache=cache,
+                        auto_save=False # Save once at the end
+                    )
+                
+                # Save cache after all updates
+                success = save_cache(cache)
+                
+                if success:
+                    final_count = len(cache.get('records', {}))
+                    new_records = final_count - initial_count
+                    print(json.dumps({
+                        "success": True,
+                        "message": f"Cache imported successfully. {new_records} new records added. Total records processed: {len(df)}",
+                        "processed": len(df),
+                        "newly_added": new_records
+                    }))
+                else:
+                    print(json.dumps({"success": False, "error": "Failed to save updated cache"}))
+                    
+            except Exception as e:
+                print(json.dumps({"success": False, "error": f"Failed to import from Excel: {str(e)}"}))
+
         else:
             print(json.dumps({
                 "success": False, 

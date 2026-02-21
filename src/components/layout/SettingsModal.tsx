@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -36,6 +36,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Records state
     const [records, setRecords] = useState<CacheRecord[]>([]);
@@ -47,6 +48,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
     // Form state
     const [formData, setFormData] = useState<Partial<CacheRecord>>({});
+
+    // Tabs state
+    const [activeTab, setActiveTab] = useState<'cache' | 'geocoding'>('cache');
+
+    // Geocoding Settings State
+    const [geocodeCountry, setGeocodeCountry] = useState(
+        localStorage.getItem('geocodeCountry') || 'Colombia'
+    );
+    const [geocodeCity, setGeocodeCity] = useState(
+        localStorage.getItem('geocodeCity') || 'Bogotá'
+    );
+
+    // Persist geocoding settings on change
+    useEffect(() => {
+        localStorage.setItem('geocodeCountry', geocodeCountry);
+        localStorage.setItem('geocodeCity', geocodeCity);
+    }, [geocodeCountry, geocodeCity]);
 
     // Fetch stats when modal opens
     useEffect(() => {
@@ -148,6 +166,63 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         });
     };
 
+    const handleExport = async () => {
+        try {
+            const folder = await window.ipcRenderer.invoke('select-directory') as string | null;
+            if (folder) {
+                setIsLoading(true);
+                runIpcAction('export_excel', { output_dir: folder }, (response) => {
+                    setIsLoading(false);
+                    if (response.success) {
+                        setMessage({ type: 'success', text: response.message });
+                    } else {
+                        setMessage({ type: 'error', text: 'Error al exportar: ' + response.error });
+                    }
+                }, () => {
+                    setIsLoading(false);
+                });
+            }
+        } catch (error) {
+            console.error('Error selecting folder:', error);
+        }
+    };
+
+    const handleImportClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Reset input so the same file can be selected again if needed
+        event.target.value = '';
+
+        let filePath = window.ipcRenderer.getFilePath(file);
+        if (!filePath && 'path' in file) {
+            filePath = (file as any).path;
+        }
+
+        if (filePath) {
+            setIsLoading(true);
+            runIpcAction('import_excel', { file_path: filePath }, (response) => {
+                setIsLoading(false);
+                if (response.success) {
+                    setMessage({ type: 'success', text: response.message });
+                    fetchStats(() => fetchRecords(1, ''));
+                } else {
+                    setMessage({ type: 'error', text: 'Error al importar: ' + response.error });
+                }
+            }, () => {
+                setIsLoading(false);
+            });
+        } else {
+            setMessage({ type: 'error', text: 'No se pudo obtener la ruta del archivo.' });
+        }
+    };
+
     const handleDeleteRecord = (key: string) => {
         if (!window.confirm('¿Eliminar este registro?')) return;
 
@@ -214,12 +289,27 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="settings-modal-overlay" onClick={handleOverlayClick}>
             <div className="settings-modal-container">
                 <div className="settings-modal-header">
-                    <h2 className="settings-modal-title">Gestión de Caché</h2>
+                    <h2 className="settings-modal-title">Configuración</h2>
                     <button className="settings-modal-close-btn" onClick={onClose}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round" strokeLinejoin="round" />
                             <line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
+                    </button>
+                </div>
+
+                <div className="settings-tabs">
+                    <button
+                        className={`settings-tab ${activeTab === 'cache' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('cache')}
+                    >
+                        Gestión de Caché
+                    </button>
+                    <button
+                        className={`settings-tab ${activeTab === 'geocoding' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('geocoding')}
+                    >
+                        Geocodificación
                     </button>
                 </div>
 
@@ -252,7 +342,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             </div>
                         </div>
 
-                        {!showForm ? (
+                        {activeTab === 'cache' && !showForm && (
                             <>
                                 <div className="top-actions">
                                     <input
@@ -264,15 +354,45 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                         onKeyDown={(e) => e.key === 'Enter' && fetchRecords(1, searchTerm)}
                                     />
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button className="btn btn-primary" onClick={startCreate}>
-                                            + Nuevo Registro
+                                        <button className="btn btn-primary" onClick={startCreate} title="Nuevo Registro">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                                <line x1="12" y1="5" x2="12" y2="19" />
+                                                <line x1="5" y1="12" x2="19" y2="12" />
+                                            </svg> Nuevo
+                                        </button>
+                                        <button className="btn btn-secondary" onClick={handleExport} title="Exportar a Excel">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                <polyline points="7 10 12 15 17 10" />
+                                                <line x1="12" y1="15" x2="12" y2="3" />
+                                            </svg> Exportar
+                                        </button>
+                                        <input
+                                            type="file"
+                                            accept=".xlsx,.xls"
+                                            style={{ display: 'none' }}
+                                            ref={fileInputRef}
+                                            onChange={handleFileSelected}
+                                        />
+                                        <button className="btn btn-secondary" onClick={handleImportClick} title="Importar desde Excel">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                <polyline points="17 8 12 3 7 8" />
+                                                <line x1="12" y1="3" x2="12" y2="15" />
+                                            </svg> Importar
                                         </button>
                                         <button
                                             className="btn btn-destructive"
                                             onClick={handleClearCache}
                                             disabled={isClearing}
+                                            title="Vaciar Todo"
                                         >
-                                            Vaciar Todo
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                                <polyline points="3 6 5 6 21 6" />
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                                <line x1="10" y1="11" x2="10" y2="17" />
+                                                <line x1="14" y1="11" x2="14" y2="17" />
+                                            </svg> Vaciar
                                         </button>
                                     </div>
                                 </div>
@@ -355,7 +475,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     </div>
                                 </div>
                             </>
-                        ) : (
+                        )}
+
+                        {activeTab === 'cache' && showForm && (
                             <div className="cache-form">
                                 <h3 className="settings-section-title">
                                     {editingRecord ? 'Editar Registro' : 'Nuevo Registro'}
@@ -422,6 +544,59 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     <button className="btn btn-primary" onClick={handleSaveRecord}>
                                         Guardar
                                     </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'geocoding' && (
+                            <div className="geocoding-settings animate-fade-in">
+                                <div className="settings-section">
+                                    <h3 className="settings-section-title">Parámetros de Geocodificación</h3>
+                                    <p className="settings-section-desc" style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                                        Configura el contexto geográfico que el algoritmo utilizará durante el enriquecimiento de direcciones. Esto mejora drásticamente la precisión.
+                                    </p>
+
+                                    <div className="form-group">
+                                        <label className="form-label">País Central</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={geocodeCountry}
+                                            onChange={(e) => setGeocodeCountry(e.target.value)}
+                                            placeholder="Ej: Colombia"
+                                        />
+                                        <span className="form-hint" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
+                                            Limita la búsqueda a un país específico (Obligatorio).
+                                        </span>
+                                    </div>
+
+                                    <div className="form-group" style={{ marginTop: '1rem' }}>
+                                        <label className="form-label">Ciudad o Localidad (Opcional)</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={geocodeCity}
+                                            onChange={(e) => setGeocodeCity(e.target.value)}
+                                            placeholder="Ej: Bogotá"
+                                        />
+                                        <span className="form-hint" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
+                                            Priorizará resultados dentro de esta región, reduciendo falsos positivos de barrios homónimos en otras ciudades.
+                                        </span>
+                                    </div>
+
+                                    <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ color: 'var(--color-info, #3b82f6)' }}>
+                                                <circle cx="12" cy="12" r="10" />
+                                                <line x1="12" y1="16" x2="12" y2="12" />
+                                                <line x1="12" y1="8" x2="12.01" y2="8" />
+                                            </svg>
+                                            Guardado Automático
+                                        </h4>
+                                        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                                            Estos valores se guardan en tiempo real y se aplicarán al siguiente archivo que proceses en el Panel de Extracción. Las direcciones que ya están en caché no se verán afectadas.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         )}

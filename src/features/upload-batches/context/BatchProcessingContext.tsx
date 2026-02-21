@@ -251,6 +251,10 @@ export function BatchProcessingProvider({ children }: { children: ReactNode }) {
         console.log('Starting processing for:', selectedFile?.name || filePath);
         setIsProcessing(true);
 
+        // Fetch geocoding settings from localStorage
+        const country = localStorage.getItem('geocodeCountry') || 'Colombia';
+        const city = localStorage.getItem('geocodeCity') || 'Bogotá';
+
         // Initialize batch with pending steps
         const batchId = `#${Date.now().toString(36).toUpperCase()}`;
         setCurrentBatch({
@@ -263,7 +267,9 @@ export function BatchProcessingProvider({ children }: { children: ReactNode }) {
             const payload = JSON.stringify({
                 process: 'process_file',
                 filePath: filePath,
-                outputDir: outputFolder
+                outputDir: outputFolder,
+                country: country,
+                city: city
             });
             window.ipcRenderer.send('dinamic_method', payload);
         } catch (error) {

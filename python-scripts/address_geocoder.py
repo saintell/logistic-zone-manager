@@ -23,7 +23,9 @@ load_dotenv()
 
 def geocode_addresses(
     addresses: list[str],
-    country: str = "Colombia"
+    country: str = "Colombia",
+    city: str = None,
+    bounds: dict = None
 ) -> list[dict]:
     """
     Geocodes a list of addresses using Google Maps Geocoding API.
@@ -31,6 +33,10 @@ def geocode_addresses(
     Args:
         addresses: List of addresses to geocode
         country: Country context for geocoding (default: Colombia)
+        city: Optional city to restrict/bias the search (e.g., "Bogotá"). 
+              Will be passed as a locality component filter.
+        bounds: Optional dictionary with 'southwest' and 'northeast' keys containing
+                'lat' and 'lng' to bias the results within a specific bounding box.
     
     Returns:
         List of dicts with {"lat": float, "lng": float} for each address.
@@ -59,19 +65,36 @@ def geocode_addresses(
         
         coordinates = []
         
+        # Configure components if city is provided
+        components = {}
+        if city:
+            components["locality"] = city
+            # We explicitly add the country here too if a city is provided, 
+            # to make the component filter robust.
+            components["country"] = "CO" if country.lower() == "colombia" else country
+            
         for i, address in enumerate(addresses):
             if i > 0 and i % 50 == 0:
                 logger.info(f"Geocoded {i}/{len(addresses)} addresses...")
             
             try:
                 # Add country context for better accuracy
-                full_address = f"{address}, {country}"
+                full_address = f"{address}, {country}" if not city else address
                 
-                result = gmaps.geocode(
-                    full_address,
-                    region="co",  # Colombia region bias
-                    language="es"
-                )
+                # Parameters for geocoding
+                geocode_params = {
+                    "address": full_address,
+                    "region": "co",  # Colombia region bias
+                    "language": "es"
+                }
+                
+                if components:
+                    geocode_params["components"] = components
+                    
+                if bounds:
+                    geocode_params["bounds"] = bounds
+                
+                result = gmaps.geocode(**geocode_params)
                 
                 if result and len(result) > 0:
                     location = result[0]['geometry']['location']
